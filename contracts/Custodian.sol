@@ -5,7 +5,6 @@
 
 pragma solidity ^0.8.17;
 
-
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC777Recipient} from "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
@@ -14,20 +13,18 @@ import {IVerifier} from "./IVerifier.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-
 error Locked();
 error Unauthorized();
 error InvalidProof();
 
-
 /**
  * @title Custodian
- * 
+ *
  * @notice The Custodian smart contract holds tokens on behalf of a user an unlocks access to their holding
  * by providing proof of a password.
- * 
+ *
  * Additionally, it permits users to recover their holdings in the event of a lost or compromised key.
- * 
+ *
  * * @custom:security-contact kaialdag@icloud.com
  */
 contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
@@ -50,7 +47,6 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     // Fields
     // ────────────────────────────────────────────────────────────────────────────────
 
-
     IVerifier public verifier;
 
     bytes32 private recoveryCommitment;
@@ -62,20 +58,31 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     uint256 public unlockedUntil;
     uint256 public recoverableAfter;
 
-    uint96 constant internal unlockPeriod = (1 days / 2);
-    uint96 constant internal recoveryBlockPeriod = 3 days;
-
+    uint96 internal constant unlockPeriod = (1 days / 2);
+    uint96 internal constant recoveryBlockPeriod = 3 days;
 
     // ────────────────────────────────────────────────────────────────────────────────
     // Setup Functionality
     // ────────────────────────────────────────────────────────────────────────────────
 
-    constructor(bytes32 _recoveryCommitment, bytes32 _unlockCommitment, address _recoveryTrustee, IVerifier _verifier) payable 
-        Ownable() 
-    {
-        require(_recoveryCommitment != _unlockCommitment, "Custodian: Recovery and unlock cannot be the same");
-        require(address(_verifier).isContract(), "Custodian: Verifier must be a contract");
-        require(_recoveryTrustee != msg.sender, "Custodian: Recovery trustee cannot be owner");
+    constructor(
+        bytes32 _recoveryCommitment,
+        bytes32 _unlockCommitment,
+        address _recoveryTrustee,
+        IVerifier _verifier
+    ) payable Ownable() {
+        require(
+            _recoveryCommitment != _unlockCommitment,
+            "Custodian: Recovery and unlock cannot be the same"
+        );
+        require(
+            address(_verifier).isContract(),
+            "Custodian: Verifier must be a contract"
+        );
+        require(
+            _recoveryTrustee != msg.sender,
+            "Custodian: Recovery trustee cannot be owner"
+        );
         recoveryCommitment = _recoveryCommitment;
         unlockCommitment = _unlockCommitment;
         recoveryTrustee = _recoveryTrustee;
@@ -83,43 +90,73 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         nonce = 0;
     }
 
-
     // ────────────────────────────────────────────────────────────────────────────────
     // Locking Functionality
     // ────────────────────────────────────────────────────────────────────────────────
 
-    function unlockAccount(uint256[8] memory proof, uint256 nullifier, uint256 until) public onlyOwner() validUnlock(proof, nullifier) requireNoRecoverRequest() {
-        require(until - block.timestamp < 7 days, "Custodian: Cannot unlock for more than 1 week");
-        
+    function unlockAccountUntil(
+        uint256[8] memory proof,
+        uint256 nullifier,
+        uint256 until
+    ) public onlyOwner validUnlock(proof, nullifier) requireNoRecoverRequest {
+        require(
+            until - block.timestamp < 7 days,
+            "Custodian: Cannot unlock for more than 1 week"
+        );
+
         emit Unlocked(block.timestamp, nonce);
 
         unlockedUntil = until;
         nonce++;
     }
 
-    function unlockAccount(uint256[8] memory proof, uint256 nullifier) external {
-        unlockAccount(proof, nullifier, block.timestamp + unlockPeriod);
+    function unlockAccount(
+        uint256[8] memory proof,
+        uint256 nullifier
+    ) external {
+        unlockAccountUntil(proof, nullifier, block.timestamp + unlockPeriod);
     }
 
-    function lock() public onlyOwner() {
+    function lock() public onlyOwner {
         unlockedUntil = 0;
     }
 
-    
     // ────────────────────────────────────────────────────────────────────────────────
     // Recover Functionality
     // ────────────────────────────────────────────────────────────────────────────────
 
-    function initiateAccountRecovery(uint256[8] memory proof, uint256 nullifier, address recoveryRecipient) external requireNoRecoverRequest() {
-        // 1. Verify the recovery nullifier is valid given the recoveryCommitment and the recipient. Recipient cannot be zero address. 
+    function initiateAccountRecovery(
+        uint256[8] memory proof,
+        uint256 nullifier,
+        address recoveryRecipient
+    ) external requireNoRecoverRequest {
+        // 1. Verify the recovery nullifier is valid given the recoveryCommitment and the recipient. Recipient cannot be zero address.
         // NOTE: nonce omitted
-        require(recoveryRecipient != address(0x0), "Custodian: Recovery recipient cannot be zero address");
-        require(recoveryRecipient != owner(), "Custodian: Recovery recipient cannot be current owner");
-        require(recoveryRecipient != recoveryTrustee, "Custodian: Recovery recipient cannot be recovery trustee");
-        if (!verifier.verifyProof(
-                [proof[0], proof[1]], [[proof[2], proof[3]], [proof[4], proof[5]]], [proof[6], proof[7]], 
-                [nullifier, uint256(recoveryCommitment), 0, uint256(uint160(recoveryRecipient))]
-        )) {
+        require(
+            recoveryRecipient != address(0x0),
+            "Custodian: Recovery recipient cannot be zero address"
+        );
+        require(
+            recoveryRecipient != owner(),
+            "Custodian: Recovery recipient cannot be current owner"
+        );
+        require(
+            recoveryRecipient != recoveryTrustee,
+            "Custodian: Recovery recipient cannot be recovery trustee"
+        );
+        if (
+            !verifier.verifyProof(
+                [proof[0], proof[1]],
+                [[proof[2], proof[3]], [proof[4], proof[5]]],
+                [proof[6], proof[7]],
+                [
+                    nullifier,
+                    uint256(recoveryCommitment),
+                    0,
+                    uint256(uint160(recoveryRecipient))
+                ]
+            )
+        ) {
             revert InvalidProof();
         }
 
@@ -138,13 +175,28 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         emit RecoveryInitiated(recoverableAfter);
     }
 
-    function recoverAccount(bytes32 newRecoveryCommitment, bytes32 newUnlockCommitment) external {
+    function recoverAccount(
+        bytes32 newRecoveryCommitment,
+        bytes32 newUnlockCommitment
+    ) external {
         // 1. Require recovery period to have elapsed, not be zero and msg.sender to be new owner
         require(recoverableAfter != 0, "Custodian: Recovery not initiated");
-        require(recoverableAfter <= block.timestamp, "Custodian: Recovery not possible at current time");
-        require(recoveryCommitment != newRecoveryCommitment, "Custodian: New recovery commitment cannot be current value");
-        require(unlockCommitment != newUnlockCommitment, "Custodian: New recovery commitment cannot be current value");
-        require(_msgSender() == recoveryAddress, "Custodian: Only new owner may recover the account");
+        require(
+            recoverableAfter <= block.timestamp,
+            "Custodian: Recovery not possible at current time"
+        );
+        require(
+            recoveryCommitment != newRecoveryCommitment,
+            "Custodian: New recovery commitment cannot be current value"
+        );
+        require(
+            unlockCommitment != newUnlockCommitment,
+            "Custodian: New recovery commitment cannot be current value"
+        );
+        require(
+            _msgSender() == recoveryAddress,
+            "Custodian: Only new owner may recover the account"
+        );
 
         recoverableAfter = 0;
         transferOwnership(recoveryAddress);
@@ -156,24 +208,52 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
      * @notice Used if a recoveryTrustee is set and the recovery password becomes compromised. Holder of the
      * recovery password must create a proof to assign a new owner - as with the initiateAccountRecovery.
      * Secondly, the user must get the recoveryTrustee address to sign the keccak256 of the encoded arguments.
-     * 
+     *
      * In effect, this allows immediate account recovery if the password holder and recoveryTrustee both
      * agree on the same new owner.
      */
-    function blockRecovery(uint256[8] memory proof, uint256 nullifier, address recoveryRecipient, bytes32 newRecoveryCommitment, bytes32 newUnlockCommitment, bytes calldata signature) external {
+    function blockRecovery(
+        uint256[8] memory proof,
+        uint256 nullifier,
+        address recoveryRecipient,
+        bytes32 newRecoveryCommitment,
+        bytes32 newUnlockCommitment,
+        bytes calldata signature
+    ) external {
         // 1. Ensure a recovery is active, a valid proof was given, new commitment to not be current values and that the signature is from the account recovery trustee
         require(recoverableAfter != 0, "Custodian: Recovery not initiated");
-        require(recoveryCommitment != newRecoveryCommitment, "Custodian: New recovery commitment cannot be current value");
-        require(unlockCommitment != newUnlockCommitment, "Custodian: New recovery commitment cannot be current value");
-        if (!verifier.verifyProof(
-                [proof[0], proof[1]], [[proof[2], proof[3]], [proof[4], proof[5]]], [proof[6], proof[7]], 
-                [nullifier, uint256(recoveryCommitment), 0, uint256(uint160(recoveryRecipient))]
-        )) {
+        require(
+            recoveryCommitment != newRecoveryCommitment,
+            "Custodian: New recovery commitment cannot be current value"
+        );
+        require(
+            unlockCommitment != newUnlockCommitment,
+            "Custodian: New recovery commitment cannot be current value"
+        );
+        if (
+            !verifier.verifyProof(
+                [proof[0], proof[1]],
+                [[proof[2], proof[3]], [proof[4], proof[5]]],
+                [proof[6], proof[7]],
+                [
+                    nullifier,
+                    uint256(recoveryCommitment),
+                    0,
+                    uint256(uint160(recoveryRecipient))
+                ]
+            )
+        ) {
             revert InvalidProof();
         }
-        bytes32 digest = keccak256(abi.encodePacked(proof, nullifier, recoveryRecipient));
+        bytes32 digest = keccak256(
+            abi.encodePacked(proof, nullifier, recoveryRecipient)
+        );
         require(
-            SignatureChecker.isValidSignatureNow(recoveryTrustee, digest, signature), 
+            SignatureChecker.isValidSignatureNow(
+                recoveryTrustee,
+                digest,
+                signature
+            ),
             "Custodian: Signature does not match recoveryTrustee"
         );
 
@@ -185,18 +265,33 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         _transferOwnership(recoveryRecipient);
     }
 
-
     // ────────────────────────────────────────────────────────────────────────────────
     // Interaction Functionality
     // ────────────────────────────────────────────────────────────────────────────────
 
-    function transfer(address tokenContract, uint256 tokenId) external onlyOwner() requireUnlocked() {
+    function transfer(
+        address tokenContract,
+        uint256 tokenId
+    ) external onlyOwner requireUnlocked requireNoRecoverRequest {}
 
+    function proxyCall(
+        address to,
+        bytes4 selector,
+        bytes calldata payload
+    ) external onlyOwner requireUnlocked requireNoRecoverRequest returns (bool, bytes memory) {
+        (bool success, bytes memory retData) = address(this).delegatecall(
+            abi.encodePacked(selector, payload)
+        );
+        require(success, "Call failed");
+
+        return (success, retData);
     }
 
     /// @dev required so contract can receive ETH
-    receive() payable external {}
+    receive() external payable {}
 
+    // TODO: implement
+    fallback() external payable {}
 
     /// @dev required implementation for IERC777Recipient
     function tokensReceived(
@@ -206,10 +301,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         uint256 amount,
         bytes calldata userData,
         bytes calldata operatorData
-    ) external {
-
-    }
-
+    ) external {}
 
     // ────────────────────────────────────────────────────────────────────────────────
     // Internal Methods
@@ -231,21 +323,22 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     }
 
     modifier validUnlock(uint256[8] memory proof, uint256 nullifier) {
-        if (verifier.verifyProof(
-                [proof[0], proof[1]], [[proof[2], proof[3]], [proof[4], proof[5]]], [proof[6], proof[7]], 
-                [nullifier, uint256(unlockCommitment), nonce, uint256(uint160(msg.sender))]
-        )) {
+        if (
+            verifier.verifyProof(
+                [proof[0], proof[1]],
+                [[proof[2], proof[3]], [proof[4], proof[5]]],
+                [proof[6], proof[7]],
+                [
+                    nullifier,
+                    uint256(unlockCommitment),
+                    nonce,
+                    uint256(uint160(msg.sender))
+                ]
+            )
+        ) {
             _;
         } else {
             revert InvalidProof();
-        }
-    }
-
-    modifier onlyOwner() override {
-        if (_msgSender() == owner()) {
-            _;
-        } else {
-            revert Unauthorized();
         }
     }
 

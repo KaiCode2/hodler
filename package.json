@@ -35,6 +35,7 @@
     "circomlibjs": "npm:circomlib@^0.5.5",
     "dotenv": "^16.0.3",
     "hardhat-circom": "^3.3.2",
-    "hardhat-deploy": "^0.11.22"
+    "hardhat-deploy": "^0.11.22",
+    "tsconfig-paths": "^4.1.1"
   }
 }

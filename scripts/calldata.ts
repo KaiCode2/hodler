@@ -30,9 +30,6 @@ export async function createUnlockCalldata(/*nullifier: string, nonce: number, s
         proofForTx.map((x) => BigInt(x).toString(10)),
     ).split('\n').join().replaceAll('"', '');
     console.log(proofAsStr, publicSignals)
-    
-    let contract = await ethers.getContractAt("Custodian", "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
-    console.log(await contract.unlockAccount(proofForTx, publicSignals[0]));
 
     console.log("Proof: ");
     console.log(JSON.stringify(proof, null, 1));
