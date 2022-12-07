@@ -30,6 +30,7 @@
     "hardhat": "^2.12.3"
   },
   "dependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@openzeppelin/contracts": "^4.8.0",
     "circomlib": "^2.0.5",
     "circomlibjs": "npm:circomlib@^0.5.5",

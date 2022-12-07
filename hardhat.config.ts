@@ -3,6 +3,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-circom";
 import "hardhat-deploy";
+import "@nomicfoundation/hardhat-network-helpers";
 import "tsconfig-paths";
 // @ts-ignore
 import { encodeMessage } from "./scripts/encodeStrings";
@@ -30,17 +31,20 @@ const testnetAccounts = {
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      // accounts: testnetAccounts,
       loggingEnabled: true,
       forking: {
         url: `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,
-        // blockNumber: 7378872
       }
     },
     goerli: {
       url: `https://goerli.infura.io/v3/${INFURA_PROJECT_ID}`,
       accounts: testnetAccounts,
       chainId: 5
+    },
+    mainnet: {
+      url: `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,
+      // accounts: testnetAccounts,
+      chainId: 1
     }
   },
   solidity: {
