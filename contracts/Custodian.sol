@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Author: Kai Aldag <kaialdag@icloud.com>
+// Author: Kai Aldag <kai.aldag@everyrealm.com>
 // Date: December 6th, 2022
 // Purpose: Custodial contract for tokens, unlockable with zk proofs
 
@@ -25,7 +25,7 @@ error InvalidProof();
  *
  * Additionally, it permits users to recover their holdings in the event of a lost or compromised key.
  *
- * * @custom:security-contact kaialdag@icloud.com
+ * * @custom:security-contact kai.aldag@everyrealm.com
  */
 contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     using Address for address;
