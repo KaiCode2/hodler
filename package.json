@@ -32,6 +32,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.0",
     "circomlib": "^2.0.5",
+    "circomlibjs": "npm:circomlib@^0.5.5",
     "dotenv": "^16.0.3",
     "hardhat-circom": "^3.3.2",
     "hardhat-deploy": "^0.11.22"
