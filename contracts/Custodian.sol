@@ -325,6 +325,10 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         nonce++;
     }
 
+    function getSpendLimit(address token) external view returns(bool exists, uint256 limit) {
+        return spendLimits.tryGet(token);
+    }
+
     // ────────────────────────────────────────────────────────────────────────────────
     // Interaction Functionality
     // ────────────────────────────────────────────────────────────────────────────────

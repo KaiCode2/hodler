@@ -1,16 +1,19 @@
-import hre, { ethers, config } from "hardhat";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 // @ts-ignore
 import { poseidon } from "circomlibjs";
 // @ts-ignore
 import { groth16 } from 'snarkjs';
 import fs from "fs/promises";
 
-export async function createUnlockCalldata() {
+export async function unlockCustodian(
+    hre: HardhatRuntimeEnvironment,
+    unlockPassword: string = "1",
+) {
+    const { ethers, config } = hre;
     const custodianDeployment = await hre.deployments.get("Custodian");
     let contract = await ethers.getContractAt("Custodian", custodianDeployment.address);
-    const unlockPassword = 1;
     const signers = await ethers.getSigners();
-    const hash  = BigInt(ethers.utils.hexZeroPad(poseidon([unlockPassword]), 32));
+    const hash  = BigInt(ethers.utils.hexZeroPad(poseidon([parseInt(unlockPassword)]), 32));
     const nonce = BigInt((await contract.nonce()).toNumber());
     const circuitInputs = {
         hash,
@@ -45,7 +48,13 @@ export async function createUnlockCalldata() {
     }
 }
 
-createUnlockCalldata().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});
+// Determines if this is called from hardhat config or via hardhat run / node. 
+// If in config, hardhat cannot be imported yet and must be lazy loaded
+if (process.env.HARDHAT_VERSION !== undefined) {
+    import("hardhat").then((hre) => {
+        unlockCustodian(hre).catch((error) => {
+            console.error(error);
+            process.exitCode = 1;
+        });
+    });
+}

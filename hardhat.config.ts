@@ -1,10 +1,10 @@
-import { HardhatUserConfig, task } from "hardhat/config";
+import { HardhatUserConfig, task, types } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-circom";
 import "hardhat-deploy";
 import "@nomicfoundation/hardhat-network-helpers";
-import "tsconfig-paths";
+import "tsconfig-paths/register";
 // @ts-ignore
 import { encodeMessage } from "./scripts/encodeStrings";
 import { config as configEnv } from "dotenv";
@@ -15,7 +15,30 @@ task("encode", "Encode a string to big number")
   .addPositionalParam("input", "string to encode")
   .setAction(async ({ input }) => console.log(encodeMessage(input)));
 
+task("unlock", "Unlock deployed custodian with primary signer")
+  .addOptionalPositionalParam("unlockPassword", "The password used to unlock the custodian", process.env.UNLOCKPASSWORD ?? "1", types.string)
+  .setAction(async (taskArguments, hre) => {
+    const { unlockPassword } = taskArguments;
+    const { unlockCustodian } = await import("./scripts/unlock");
+    await unlockCustodian(hre, unlockPassword);
+  });
 
+task("limit", "Unlock deployed custodian with primary signer")
+  .addPositionalParam("method", "Either get or set", "get", types.string)
+  .addOptionalPositionalParam("token", "Token to apply limit for", undefined, types.string)
+  .addOptionalPositionalParam("unlockPassword", "The password used to unlock the custodian", process.env.UNLOCKPASSWORD ?? "1", types.string)
+  .setAction(async (taskArguments, hre) => {
+    const { method, token, unlockPassword } = taskArguments;
+    if (method == "get") {
+      const { getSpendLimit } = await import("./scripts/spendLimit");
+      await getSpendLimit(hre, token);
+    } else if (method == "set") {
+      const { setSpendLimit } = await import("./scripts/spendLimit");
+      await setSpendLimit(hre, token, unlockPassword);
+    } else {
+      console.log(`Invalide method given: ${method}. Must use either get or set.`);
+    }
+  });
 
 const INFURA_PROJECT_ID = process.env.INFURA_PROJECT_ID;
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
