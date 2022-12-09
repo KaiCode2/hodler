@@ -5,7 +5,7 @@
 
 pragma solidity ^0.8.17;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableDelayed} from "./utilities/OwnableDelayed.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -15,6 +15,7 @@ import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Hol
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {IVerifier} from "./IVerifier.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
@@ -33,7 +34,7 @@ error InvalidProof();
  *
  * * @custom:security-contact kai.aldag@everyrealm.com
  */
-contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
+contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipient, ReentrancyGuard {
     using Address for address;
     using EnumerableMap for EnumerableMap.Bytes32ToUintMap;
 
@@ -60,7 +61,6 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     bytes32 private unlockCommitment;
     uint256 public nonce;
     address public recoveryTrustee;
-    address public recoveryAddress;
 
     /** 
      * @notice mapping to set token limitations
@@ -78,10 +78,9 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     // TODO: add ERC-721 mapping for tokens that require new unlocks to transfer
 
     uint256 public unlockedUntil;
-    uint256 public recoverableAfter;
 
     uint96 internal constant unlockPeriod = (1 days / 2);
-    uint96 internal constant recoveryBlockPeriod = 3 days;
+    uint96 internal constant recoveryBlockPeriod = 5 days;
 
     // ────────────────────────────────────────────────────────────────────────────────
     // Setup Functionality
@@ -92,7 +91,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         bytes32 _unlockCommitment,
         address _recoveryTrustee,
         IVerifier _verifier
-    ) payable Ownable() {
+    ) payable OwnableDelayed() {
         require(
             _recoveryCommitment != _unlockCommitment,
             "Custodian: Recovery and unlock cannot be the same"
@@ -180,17 +179,19 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
             revert InvalidProof();
         }
 
-        // 2. If a recovery trustee is set, require a 3 day delay where trustee may intervene to block a reset
+        // 2. If a recovery trustee is set, require a delay where trustee may intervene to block a reset
         // If no trustee, account is immediately recoverable
+        uint256 recoverableAfter;
         if (recoveryTrustee == address(0x0)) {
             recoverableAfter = block.timestamp;
         } else {
-            recoverableAfter = block.timestamp + 5 days;
+            recoverableAfter = block.timestamp + recoveryBlockPeriod;
         }
-
-        // 3. Lock account and set recoveryAddress
+        
+        // 3. Nominate owner and lock custodian
+        _nominateOwner(recoveryRecipient, recoverableAfter);
         unlockedUntil = 0;
-        recoveryAddress = recoveryRecipient;
+        unlockCommitment = bytes32(0x0);
         nonce++;
 
         emit RecoveryInitiated(recoverableAfter);
@@ -201,30 +202,29 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         bytes32 newUnlockCommitment
     ) external {
         // 1. Require recovery period to have elapsed, not be zero and msg.sender to be new owner
-        require(recoverableAfter != 0, "Custodian: Recovery not initiated");
-        require(
-            recoverableAfter <= block.timestamp,
-            "Custodian: Recovery not possible at current time"
-        );
+        acceptOwnership();
+        
         require(
             recoveryCommitment != newRecoveryCommitment,
             "Custodian: New recovery commitment cannot be current value"
+        );
+        require(
+            newRecoveryCommitment != bytes32(0x0),
+            "Custodian: New recovery commitment cannot be empty"
         );
         require(
             unlockCommitment != newUnlockCommitment,
             "Custodian: New recovery commitment cannot be current value"
         );
         require(
-            _msgSender() == recoveryAddress,
-            "Custodian: Only new owner may recover the account"
+            newUnlockCommitment != bytes32(0x0),
+            "Custodian: New unlock commitment cannot be empty"
         );
 
-        recoverableAfter = 0;
         recoveryCommitment = newRecoveryCommitment;
         unlockCommitment = newUnlockCommitment;
-        transferOwnership(recoveryAddress);
 
-        emit RecoveryOccured(owner());
+        emit RecoveryOccured(_msgSender());
     }
 
     /**
@@ -244,14 +244,22 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         bytes calldata signature
     ) external {
         // 1. Ensure a recovery is active, a valid proof was given, new commitment to not be current values and that the signature is from the account recovery trustee
-        require(recoverableAfter != 0, "Custodian: Recovery not initiated");
+        require(ownerTransferEligibleTime() != 0, "Custodian: Recovery not initiated");
         require(
             recoveryCommitment != newRecoveryCommitment,
             "Custodian: New recovery commitment cannot be current value"
         );
         require(
+            newRecoveryCommitment != bytes32(0x0),
+            "Custodian: New recovery commitment cannot be empty"
+        );
+        require(
             unlockCommitment != newUnlockCommitment,
             "Custodian: New recovery commitment cannot be current value"
+        );
+        require(
+            newUnlockCommitment != bytes32(0x0),
+            "Custodian: New unlock commitment cannot be empty"
         );
         if (
             !verifier.verifyProof(
@@ -282,13 +290,12 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         );
 
         // 2. Permit recovery
-        recoverableAfter = 0;
-        recoveryAddress = address(0x0);
+        _transferOwnership(recoveryRecipient);
         unlockCommitment = newUnlockCommitment;
         recoveryCommitment = newRecoveryCommitment;
-        _transferOwnership(recoveryRecipient);
         nonce++;
     }
+
 
     // ────────────────────────────────────────────────────────────────────────────────
     // Limit Functionality
@@ -400,11 +407,10 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         setLimit(getNFTLimitKey(token, tokenId), hasLimit ? 1 : 0);
     }
 
+
     // ────────────────────────────────────────────────────────────────────────────────
     // Interaction Functionality
     // ────────────────────────────────────────────────────────────────────────────────
-
-    // TODO: Add ERC1155 support
 
     function sendEth(
         uint256 amount,
@@ -611,7 +617,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     //  ──────────────────────────  Function Modifiers  ───────────────────────────  \\
 
     modifier requireNoRecoverRequest() {
-        require(recoverableAfter == 0, "Custodian: Recovery initiated");
+        require(pendingOwner() == address(0x0), "Custodian: Recovery initiated");
         _;
     }
 
@@ -629,8 +635,8 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
      */
     modifier validUnlock(uint256[8] calldata proof, uint256 nullifier) {
         if (verifyUnlockProof(proof, nullifier)) {
-            nonce++;
             _;
+            nonce++;
         } else {
             revert InvalidProof();
         }
@@ -695,5 +701,10 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         return bytes32(uint256(uint160(addr)) << 96);
     }
 
-    // TODO: override ownable
+    
+    //  ───────────────────────────  Ownable Override  ────────────────────────────  \\
+
+    function renounceOwnership() public view override onlyOwner {
+        revert("Custodian: Renouncing ownership not permitted");
+    }
 }
