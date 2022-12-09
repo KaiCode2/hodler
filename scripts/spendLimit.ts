@@ -60,7 +60,7 @@ export async function setSpendLimit(
             value: ethers.utils.parseEther("10.0")
         });
         await sendEthToContract.wait();
-        const setLimitTx = await custodian.setSpendLimit(token ?? custodian.address, ethers.utils.parseEther("5.0"), proofForTx, publicSignals[0]);
+        const setLimitTx = await custodian.setTokenSpendLimit(token ?? custodian.address, ethers.utils.parseEther("5.0"), proofForTx, publicSignals[0]);
         console.log(`Eth limit set at tx: ${setLimitTx.hash}`);
         // await setLimitTx.wait();
         // const returnEthTx = await custodian.sendEth(ethers.utils.parseEther("4.0"), "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
@@ -79,8 +79,8 @@ export async function getSpendLimit(
     const { ethers } = hre;
     const custodianDeployment = await hre.deployments.get("Custodian");
     let custodian = await ethers.getContractAt("Custodian", custodianDeployment.address);
-    const result = await custodian.getSpendLimit(token ?? custodian.address);
-    console.log(result)
+    const result = await custodian.getTokenLimit(token ?? custodian.address);
+
     const { exists, limit } = result;
     if (exists) {
         console.log(`Limit is: ${token ? limit : ethers.utils.formatEther(limit).concat(" Eth")}`);

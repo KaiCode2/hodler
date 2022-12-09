@@ -35,7 +35,7 @@ error InvalidProof();
  */
 contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     using Address for address;
-    using EnumerableMap for EnumerableMap.AddressToUintMap;
+    using EnumerableMap for EnumerableMap.Bytes32ToUintMap;
 
     // ────────────────────────────────────────────────────────────────────────────────
     // Events
@@ -62,8 +62,18 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     address public recoveryTrustee;
     address public recoveryAddress;
 
-    /// @notice used to set minimum balances for ERC-20 tokens
-    EnumerableMap.AddressToUintMap private spendLimits;
+    /** 
+     * @notice mapping to set token limitations
+     * 
+     * @dev Key-value system is as follows:
+     * 1) For fungible tokens, bytes32 is cast of address
+     * 2) For multi tokens (1155s), bytes32 is keccak256 of address and token ID
+     * 3) For non-fungible tokens, bytes32 is keccak256 of address and token ID
+     * 
+     * 1&2) For fungible and multi tokens, value will be max allowance.
+     * 3)   For non-fungible tokens, value will be 1 to indicate a limit exists.
+    */
+    EnumerableMap.Bytes32ToUintMap private spendLimits;
 
     // TODO: add ERC-721 mapping for tokens that require new unlocks to transfer
 
@@ -119,7 +129,6 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         emit Unlocked(block.timestamp, nonce);
 
         unlockedUntil = until;
-        nonce++;
     }
 
     function unlockAccount(
@@ -143,7 +152,6 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         address recoveryRecipient
     ) external requireNoRecoverRequest {
         // 1. Verify the recovery nullifier is valid given the recoveryCommitment and the recipient. Recipient cannot be zero address.
-        // NOTE: nonce omitted
         require(
             recoveryRecipient != address(0x0),
             "Custodian: Recovery recipient cannot be zero address"
@@ -260,6 +268,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         ) {
             revert InvalidProof();
         }
+        // TODO: Migrate to ERC712 sig for wallet compatibility
         bytes32 digest = keccak256(
             abi.encodePacked(proof, nullifier, recoveryRecipient)
         );
@@ -287,51 +296,108 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
 
     /**
      * @notice sets a minimum balance that must be held by the custodian contract. Used
-     * to prevent the custodian from being drained while unlocked - or to require user
-     * explicitly extend the spend limit for more deliberate spending.
+     * to add further safeguards on important tokens by requiring explicit user
+     * authorization for using funds beyond threshold
      * 
-     * @param forToken address of ERC-20 to set limit for. Must support ERC-20's interface
-     * verified using ERC-165. NOTE: if address is contract address, a limit is set on
-     * contract's Ether balance
+     * @param token address of the ERC-20 contract for which the limit will be set. Must
+     * support ERC-20's interface, verified using ERC-165. 
+     * NOTE: if token is custodian contract's address, a limit is set on contract's Ether balance.
+     * 
+     * @param unlockSpendLimit Maximum spend limit of the contract while it is unlocked.
+     *                         Set to zero to remove limit.
      * 
      */
-    function setSpendLimit(
-        address forToken, 
+    function setTokenSpendLimit(
+        address token, 
         uint256 unlockSpendLimit, 
         uint256[8] calldata proof, 
         uint256 unlockNullifier
     ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
         // 1. Check if user is setting Eth balance for contract or an ERC-20
-        if (forToken == address(this)) {
+        if (token == address(this)) {
             // 2. Ensure custodian has more balance than minimum, if so, set new limit
             require(
                 address(this).balance >= unlockSpendLimit,
                 "Custodian: Spend limit must be less than or equal to Custodian's current balance"
             );
         } else {
-            // 2. Ensure forToken conforms to ERC-20, custodian has enough balance, then set limit
+            // 2. Ensure token conforms to ERC-20, custodian has enough balance, then set limit
             require(
-                IERC165(forToken).supportsInterface(type(IERC20).interfaceId),
+                IERC165(token).supportsInterface(type(IERC20).interfaceId),
                 "Custodian: Address does not support ERC20"
             );
             require(
-                IERC20(forToken).balanceOf(address(this)) >= unlockSpendLimit,
-                "Custodian: Address does not support ERC20"
+                IERC20(token).balanceOf(address(this)) >= unlockSpendLimit,
+                "Custodian: Spend limit must be less than or equal to Custodian's current balance"
             );
         }
 
-        // 3. If limit is not zero, set value. If zero, remove limit
-        if (unlockSpendLimit != 0) {
-            spendLimits.set(forToken, unlockSpendLimit);
-        } else {
-            spendLimits.remove(forToken);
-        }
-
-        nonce++;
+        // 3. Set limit
+        setLimit(getTokenLimitKey(token), unlockSpendLimit);
     }
 
-    function getSpendLimit(address token) external view returns(bool exists, uint256 limit) {
-        return spendLimits.tryGet(token);
+    /**
+     * @notice sets a minimum balance that must be held by the custodian contract for an 
+     *  ERC-1155 token. Used to add further safeguards on important tokens.
+     * 
+     * @param token address of the ERC-1155 contract for which the limit will be set. Must
+     * support ERC-1155's interface, verified using ERC-165. 
+     * 
+     * @param tokenId Multi token ID to apply limit to.
+     * 
+     * @param unlockSpendLimit Maximum spend limit of the contract while it is unlocked.
+     *                         Set to zero to remove limit.
+     * 
+     */
+    function setMultiTokenLimit(
+        address token, 
+        uint256 tokenId, 
+        uint256 unlockSpendLimit, 
+        uint256[8] calldata proof, 
+        uint256 unlockNullifier
+    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
+        // 1. Ensure token conforms to ERC-1155, custodian has enough balance, then set limit
+        require(
+            IERC165(token).supportsInterface(type(IERC1155).interfaceId),
+            "Custodian: Address does not support IERC1155"
+        );
+        require(
+            IERC1155(token).balanceOf(address(this), tokenId) >= unlockSpendLimit,
+            "Custodian: Spend limit must be less than or equal to Custodian's current balance"
+        );
+        setLimit(getMultiTokenLimitKey(token, tokenId), unlockSpendLimit);
+    }
+
+    /**
+     * @notice Restricts transfers for an NFT while account is unlocked. This requires an
+     * explicit and unique unlock to transfer the NFT. Use to add highest amount of security
+     * to valuable NFTs.
+     * 
+     * @param token address of the ERC-721 contract for which the limit will be set. Must
+     * support ERC-721's interface, verified using ERC-165. 
+     * 
+     * @param tokenId Multi token ID to apply limit to.
+     * 
+     * @param hasLimit Set to true if applying a limit, false is removing limit.
+     * 
+     */
+    function setNFTLimit(
+        address token, 
+        uint256 tokenId, 
+        bool hasLimit,
+        uint256[8] calldata proof, 
+        uint256 unlockNullifier
+    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
+        // 1. Ensure token conforms to ERC-721, custodian owns the NFT, then set limit
+        require(
+            IERC165(token).supportsInterface(type(IERC721).interfaceId),
+            "Custodian: Address does not support IERC721"
+        );
+        require(
+            IERC721(token).ownerOf(tokenId) == address(this),
+            "Custodian: Custodian does not own given token"
+        );
+        setLimit(getNFTLimitKey(token, tokenId), hasLimit ? 1 : 0);
     }
 
     // ────────────────────────────────────────────────────────────────────────────────
@@ -348,7 +414,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
             address(this).balance >= amount,
             "Custodian: Insufficient funds"
         );
-        (, uint256 limit) = spendLimits.tryGet(address(this));
+        (, uint256 limit) = getTokenLimit(address(this));
         require(
             address(this).balance - amount >= limit,
             "Custodian: Amount would exceed balance or spend limit"
@@ -370,9 +436,10 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
             IERC165(tokenContract).supportsInterface(type(IERC20).interfaceId),
             "Custodian: Address does not support ERC20"
         );
-        (, uint256 limit) = spendLimits.tryGet(address(this));
+        (, uint256 limit) = getTokenLimit(tokenContract);
+        uint256 balance = IERC20(tokenContract).balanceOf(address(this));
         require(
-            address(this).balance - amount >= limit,
+            balance - limit >= amount, 
             "Custodian: Amount would exceed balance or spend limit"
         );
 
@@ -387,19 +454,20 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     function transferMultiToken(
         address tokenContract,
         uint256 tokenId,
-        uint256 quantity,
+        uint256 amount,
         address to
     ) external onlyOwner requireUnlocked requireNoRecoverRequest {
         require(
             IERC165(tokenContract).supportsInterface(type(IERC1155).interfaceId),
             "Custodian: Address does not support IERC721"
         );
+        (, uint256 limit) = getMultiTokenLimit(tokenContract, tokenId);
         uint256 balance = IERC1155(tokenContract).balanceOf(address(this), tokenId);
         require(
-            balance >= quantity, 
-            "Custodian: Insufficient balance of token"
+            balance - limit >= amount, 
+            "Custodian: Amount would exceed balance or spend limit"
         );
-        IERC1155(tokenContract).safeTransferFrom(address(this), to, tokenId, quantity, "");
+        IERC1155(tokenContract).safeTransferFrom(address(this), to, tokenId, amount, "");
     }
 
     function transferNFT(
@@ -407,6 +475,31 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         uint256 tokenId,
         address to
     ) external onlyOwner requireUnlocked requireNoRecoverRequest {
+        require(
+            IERC165(tokenContract).supportsInterface(type(IERC721).interfaceId),
+            "Custodian: Address does not support IERC721"
+        );
+        (bool hasLimit,) = getNFTLimit(tokenContract, tokenId);
+        require(!hasLimit, "Custodian: Unable to transfer lock-protected NFT");
+        address owner = IERC721(tokenContract).ownerOf(tokenId);
+        require(
+            owner != address(0x0), 
+            "Custodian: No owner for token"
+        );
+        require(
+            owner == address(this) || IERC721(tokenContract).isApprovedForAll(owner, address(this)) || IERC721(tokenContract).getApproved(tokenId) == address(this),
+            "Custodian: Custodian is not authorized for given token"
+        );
+        IERC721(tokenContract).safeTransferFrom(address(this), to, tokenId);
+    }
+
+    function transferNFT(
+        address tokenContract,
+        uint256 tokenId,
+        address to,
+        uint256[8] calldata proof, 
+        uint256 unlockNullifier
+    ) external onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
         require(
             IERC165(tokenContract).supportsInterface(type(IERC721).interfaceId),
             "Custodian: Address does not support IERC721"
@@ -421,6 +514,12 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
             "Custodian: Custodian is not authorized for given token"
         );
         IERC721(tokenContract).safeTransferFrom(address(this), to, tokenId);
+
+        // If NFT has a limit, remove once transferred
+        (bool hasLimit,) = getNFTLimit(tokenContract, tokenId);
+        if (hasLimit) {
+            setLimit(getNFTLimitKey(tokenContract, tokenId), 0);
+        }
     }
 
     function proxyCall(
@@ -480,10 +579,12 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
      * @dev called after any external calls are made to enfore spend limits
      */
     function verifyAllSpendLimits() private view {
+        // TODO: This is gonna be difficult to implement given the new bytes32 mapping...
+        // Leaving this for now
         uint256 length = spendLimits.length();
         for (uint256 i = 0; i < length; i++) {
-            (address token, ) = spendLimits.at(i);
-            verifySpendLimit(token);
+            // (address token, ) = spendLimits.at(i);
+            // verifySpendLimit(token);
         }
     }
 
@@ -493,14 +594,16 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
     function verifySpendLimit(address token) private view {
         // Try getting balance of token then check less than limit.
         // If revert, check if address is contract, if so, check eth balance within limit
-        uint256 limit = spendLimits.get(token);
-        try IERC20(token).balanceOf(address(this)) returns(uint256 balance) {
-            if (balance < limit) {
-                revert Overspent(token, limit, balance);
-            }
-        } catch {
-            if (token == address(this) && address(this).balance < limit) {
-                revert Overspent(token, limit, address(this).balance);
+        (bool hasLimit, uint256 limit) = getTokenLimit(token);
+        if (hasLimit) {
+            try IERC20(token).balanceOf(address(this)) returns(uint256 balance) {
+                if (balance < limit) {
+                    revert Overspent(token, limit, balance);
+                }
+            } catch {
+                if (token == address(this) && address(this).balance < limit) {
+                    revert Overspent(token, limit, address(this).balance);
+                }
             }
         }
     }
@@ -520,12 +623,76 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         }
     }
 
+    /**
+     * @dev Checks if an unlock proof is valid and increments nonce. 
+     * Throws InvalidProof if verification fails
+     */
     modifier validUnlock(uint256[8] calldata proof, uint256 nullifier) {
         if (verifyUnlockProof(proof, nullifier)) {
+            nonce++;
             _;
         } else {
             revert InvalidProof();
         }
+    }
+
+    //  ───────────────────────────  Utility Functions  ───────────────────────────  \\
+
+    /**
+     * @dev used to get ERC20 spend limit key
+     */
+    function getTokenLimitKey(address token) private pure returns(bytes32 key) {
+        return addressToBytes32(token);
+    }
+
+    /**
+     * @dev used to set ERC1155 spend limit key
+     */
+    function getMultiTokenLimitKey(address token, uint256 tokenId) private pure returns(bytes32 key) {
+        return keccak256(abi.encodePacked(token, tokenId));
+    }
+
+    /**
+     * @dev used to get ERC721 spend limit key
+     */
+    function getNFTLimitKey(address token, uint256 tokenId) private pure returns(bytes32 key) {
+        return keccak256(abi.encodePacked(token, tokenId));
+    }
+
+    /**
+     * @dev used to set ERC20 spend limits. Set limit to 0 to remove limit
+     */
+    function getTokenLimit(address token) public view returns(bool exists, uint256 limit) {
+        return spendLimits.tryGet(getTokenLimitKey(token));
+    }
+
+    /**
+     * @dev used to set ERC1155 spend limits. Set limit to 0 to remove limit
+     */
+    function getMultiTokenLimit(address token, uint256 tokenId) public view returns(bool exists, uint256 limit) {
+        return spendLimits.tryGet(getMultiTokenLimitKey(token, tokenId));
+    }
+
+    /**
+     * @dev used to set ERC721 spend limits. Set limit to 0 to remove limit
+     */
+    function getNFTLimit(address token, uint256 tokenId) public view returns(bool exists, uint256 limit) {
+        return spendLimits.tryGet(getNFTLimitKey(token, tokenId));
+    }
+
+    /**
+     * @dev Convenience function for setting and removing spend limits
+     */
+    function setLimit(bytes32 key, uint256 limit) private {
+        if (limit != 0) {
+            spendLimits.set(key, limit);
+        } else {
+            spendLimits.remove(key);
+        }
+    }
+
+    function addressToBytes32(address addr) private pure returns(bytes32) {
+        return bytes32(uint256(uint160(addr)) << 96);
     }
 
     // TODO: override ownable
