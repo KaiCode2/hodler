@@ -79,8 +79,6 @@ contract Custodian is OwnableDelayed, Nonce, ERC721Holder, ERC1155Holder, IERC77
     */
     EnumerableMap.Bytes32ToUintMap private spendLimits;
 
-    // TODO: add ERC-721 mapping for tokens that require new unlocks to transfer
-
     Timers.Timestamp public unlockTimer;
 
     uint96 internal constant unlockPeriod = (1 days / 2);
