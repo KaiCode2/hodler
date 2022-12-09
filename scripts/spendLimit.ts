@@ -21,9 +21,9 @@ export async function setSpendLimit(
     // const address = "0x1234567890123456789012345678901234567890";
     // await impersonateAccount(address);
     // const impersonatedSigner = await ethers.getSigner(address);
+    const { unlocked, until } = await custodian.isUnlocked();
 
-    const unlockedUntil = BigInt(await custodian.unlockedUntil());
-    if (unlockedUntil < (Date.now() + 6_000)) {
+    if (!unlocked) {
         await hre.run("unlock");
     }
 
@@ -55,6 +55,7 @@ export async function setSpendLimit(
             proof.pi_c[0],
             proof.pi_c[1],
         ];
+
         const sendEthToContract = await primarySigner.sendTransaction({
             to: custodian.address,
             value: ethers.utils.parseEther("10.0")

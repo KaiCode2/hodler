@@ -18,6 +18,7 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Timers} from "@openzeppelin/contracts/utils/Timers.sol";
 import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 error Locked();
@@ -37,8 +38,9 @@ error InvalidProof();
  */
 contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipient, ReentrancyGuard {
     using Address for address;
-    using SafeCast for uint256;
     using EnumerableMap for EnumerableMap.Bytes32ToUintMap;
+    using SafeCast for uint256;
+    using Timers for Timers.Timestamp;
 
     // ────────────────────────────────────────────────────────────────────────────────
     // Events
@@ -79,7 +81,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
 
     // TODO: add ERC-721 mapping for tokens that require new unlocks to transfer
 
-    uint256 public unlockedUntil;
+    Timers.Timestamp public unlockTimer;
 
     uint96 internal constant unlockPeriod = (1 days / 2);
     uint96 internal constant recoveryBlockPeriod = 5 days;
@@ -129,7 +131,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
 
         emit Unlocked(block.timestamp, nonce);
 
-        unlockedUntil = until;
+        unlockTimer.setDeadline(until.toUint64());
     }
 
     function unlockAccount(
@@ -140,7 +142,15 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
     }
 
     function lock() public onlyOwner {
-        unlockedUntil = 0;
+        unlockTimer.reset();
+    }
+
+    function isUnlocked() external view returns(bool unlocked, uint64 until) {
+        if (unlockTimer.isPending()) {
+            return (true, unlockTimer.getDeadline());
+        } else {
+            return (false, 0);
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────────────
@@ -192,7 +202,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         
         // 3. Nominate owner and lock custodian
         _nominateOwner(recoveryRecipient, recoverableAfter.toUint64());
-        unlockedUntil = 0;
+        unlockTimer.reset();
         unlockCommitment = bytes32(0x0);
         nonce++;
 
@@ -624,7 +634,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
     }
 
     modifier requireUnlocked() {
-        if (unlockedUntil > block.timestamp) {
+        if (unlockTimer.isPending()) {
             _;
         } else {
             revert Locked();
