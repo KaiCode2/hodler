@@ -6,6 +6,7 @@
 pragma solidity ^0.8.17;
 
 import {OwnableDelayed} from "./utilities/OwnableDelayed.sol";
+import {Nonce} from "./utilities/Nonce.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -34,9 +35,9 @@ error InvalidProof();
  *
  * Additionally, it permits users to recover their holdings in the event of a lost or compromised key.
  *
- * * @custom:security-contact kai.aldag@everyrealm.com
+ * @custom:security-contact kai.aldag@everyrealm.com
  */
-contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipient, ReentrancyGuard {
+contract Custodian is OwnableDelayed, Nonce, ERC721Holder, ERC1155Holder, IERC777Recipient, ReentrancyGuard {
     using Address for address;
     using EnumerableMap for EnumerableMap.Bytes32ToUintMap;
     using SafeCast for uint256;
@@ -63,7 +64,6 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
 
     bytes32 private recoveryCommitment;
     bytes32 private unlockCommitment;
-    uint256 public nonce;
     address public recoveryTrustee;
 
     /** 
@@ -112,7 +112,6 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         unlockCommitment = _unlockCommitment;
         recoveryTrustee = _recoveryTrustee;
         verifier = _verifier;
-        nonce = 0;
     }
 
     // ────────────────────────────────────────────────────────────────────────────────
@@ -129,7 +128,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
             "Custodian: Cannot unlock for more than 1 week"
         );
 
-        emit Unlocked(block.timestamp, nonce);
+        emit Unlocked(block.timestamp, currentNonce());
 
         unlockTimer.setDeadline(until.toUint64());
     }
@@ -183,7 +182,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
                 [
                     nullifier,
                     uint256(recoveryCommitment),
-                    nonce,
+                    currentNonce(),
                     uint256(uint160(recoveryRecipient))
                 ]
             )
@@ -280,7 +279,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
                 [
                     nullifier,
                     uint256(recoveryCommitment),
-                    nonce,
+                    currentNonce(),
                     uint256(uint160(recoveryRecipient))
                 ]
             )
@@ -583,7 +582,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
                 [
                     unlockNullifier,
                     uint256(unlockCommitment),
-                    nonce,
+                    currentNonce(),
                     uint256(uint160(owner()))
                 ]
             );
@@ -649,11 +648,6 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         } else {
             revert InvalidProof();
         }
-    }
-
-    modifier nonceIncrementing() {
-        _;
-        nonce++;
     }
 
     //  ───────────────────────────  Utility Functions  ───────────────────────────  \\

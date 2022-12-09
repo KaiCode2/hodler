@@ -28,10 +28,10 @@ export async function setSpendLimit(
     }
 
     const hash  = BigInt(ethers.utils.hexZeroPad(poseidon([parseInt(unlockPassword)]), 32));
-    const nonce = BigInt((await custodian.nonce()).toNumber());
+    const nonce = await custodian.currentNonce();
     const circuitInputs = {
         hash,
-        nonce,
+        nonce: BigInt(nonce),
         address: BigInt(signers[0].address),
         preimage: BigInt(unlockPassword),
     };

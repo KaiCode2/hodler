@@ -14,10 +14,12 @@ export async function unlockCustodian(
     let contract = await ethers.getContractAt("Custodian", custodianDeployment.address);
     const signers = await ethers.getSigners();
     const hash  = BigInt(ethers.utils.hexZeroPad(poseidon([parseInt(unlockPassword)]), 32));
-    const nonce = BigInt((await contract.nonce()).toNumber());
+    const nonce = await contract.currentNonce();
+    console.log(nonce)
+    // const nonce = 0
     const circuitInputs = {
         hash,
-        nonce,
+        nonce: BigInt(nonce),
         address: BigInt(signers[0].address),
         preimage: BigInt(unlockPassword),
     };
