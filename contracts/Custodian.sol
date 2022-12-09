@@ -427,7 +427,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
     function sendEth(
         uint256 amount,
         address payable to
-    ) external onlyOwner requireUnlocked requireNoRecoverRequest returns(bool success, bytes memory data) {
+    ) external onlyOwner requireUnlocked requireNoRecoverRequest nonReentrant returns(bool success, bytes memory data) {
         require(
             address(this).balance >= amount,
             "Custodian: Insufficient funds"
@@ -449,7 +449,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         address tokenContract,
         uint256 amount,
         address to
-    ) external onlyOwner requireUnlocked requireNoRecoverRequest returns(bool success) {
+    ) external onlyOwner requireUnlocked requireNoRecoverRequest nonReentrant returns(bool success) {
         require(
             IERC165(tokenContract).supportsInterface(type(IERC20).interfaceId),
             "Custodian: Address does not support ERC20"
@@ -474,7 +474,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         uint256 tokenId,
         uint256 amount,
         address to
-    ) external onlyOwner requireUnlocked requireNoRecoverRequest {
+    ) external onlyOwner requireUnlocked requireNoRecoverRequest nonReentrant {
         require(
             IERC165(tokenContract).supportsInterface(type(IERC1155).interfaceId),
             "Custodian: Address does not support IERC721"
@@ -492,7 +492,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         address tokenContract,
         uint256 tokenId,
         address to
-    ) external onlyOwner requireUnlocked requireNoRecoverRequest {
+    ) external onlyOwner requireUnlocked requireNoRecoverRequest nonReentrant {
         require(
             IERC165(tokenContract).supportsInterface(type(IERC721).interfaceId),
             "Custodian: Address does not support IERC721"
@@ -517,7 +517,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         address to,
         uint256[8] calldata proof, 
         uint256 unlockNullifier
-    ) external onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
+    ) external onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest nonReentrant {
         require(
             IERC165(tokenContract).supportsInterface(type(IERC721).interfaceId),
             "Custodian: Address does not support IERC721"
@@ -544,7 +544,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         address to,
         bytes4 selector,
         bytes calldata payload
-    ) external onlyOwner requireUnlocked requireNoRecoverRequest returns (bool, bytes memory) {
+    ) external onlyOwner requireUnlocked requireNoRecoverRequest nonReentrant returns (bool, bytes memory) {
         (bool success, bytes memory retData) = to.delegatecall(
             abi.encodePacked(selector, payload)
         );
