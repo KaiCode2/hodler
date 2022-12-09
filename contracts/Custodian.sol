@@ -123,7 +123,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         uint256[8] calldata proof,
         uint256 unlockNullifier,
         uint256 until
-    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
+    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest nonceIncrementing {
         require(
             until - block.timestamp < 7 days,
             "Custodian: Cannot unlock for more than 1 week"
@@ -161,7 +161,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         uint256[8] memory proof,
         uint256 nullifier,
         address recoveryRecipient
-    ) external requireNoRecoverRequest {
+    ) external requireNoRecoverRequest nonceIncrementing {
         // 1. Verify the recovery nullifier is valid given the recoveryCommitment and the recipient. Recipient cannot be zero address.
         require(
             recoveryRecipient != address(0x0),
@@ -204,7 +204,6 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         _nominateOwner(recoveryRecipient, recoverableAfter.toUint64());
         unlockTimer.reset();
         unlockCommitment = bytes32(0x0);
-        nonce++;
 
         emit RecoveryInitiated(recoverableAfter);
     }
@@ -212,7 +211,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
     function recoverAccount(
         bytes32 newRecoveryCommitment,
         bytes32 newUnlockCommitment
-    ) external {
+    ) external nonceIncrementing {
         // 1. Require recovery period to have elapsed, not be zero and msg.sender to be new owner
         acceptOwnership();
         
@@ -254,7 +253,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         bytes32 newRecoveryCommitment,
         bytes32 newUnlockCommitment,
         bytes calldata signature
-    ) external {
+    ) external nonceIncrementing {
         // 1. Ensure a recovery is active, a valid proof was given, new commitment to not be current values and that the signature is from the account recovery trustee
         require(ownerTransferEligibleTime() != 0, "Custodian: Recovery not initiated");
         require(
@@ -305,7 +304,6 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         _transferOwnership(recoveryRecipient);
         unlockCommitment = newUnlockCommitment;
         recoveryCommitment = newRecoveryCommitment;
-        nonce++;
     }
 
 
@@ -331,7 +329,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         uint256 unlockSpendLimit, 
         uint256[8] calldata proof, 
         uint256 unlockNullifier
-    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
+    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest nonceIncrementing {
         // 1. Check if user is setting Eth balance for contract or an ERC-20
         if (token == address(this)) {
             // 2. Ensure custodian has more balance than minimum, if so, set new limit
@@ -374,7 +372,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         uint256 unlockSpendLimit, 
         uint256[8] calldata proof, 
         uint256 unlockNullifier
-    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
+    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest nonceIncrementing {
         // 1. Ensure token conforms to ERC-1155, custodian has enough balance, then set limit
         require(
             IERC165(token).supportsInterface(type(IERC1155).interfaceId),
@@ -406,7 +404,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         bool hasLimit,
         uint256[8] calldata proof, 
         uint256 unlockNullifier
-    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest {
+    ) public onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest nonceIncrementing {
         // 1. Ensure token conforms to ERC-721, custodian owns the NFT, then set limit
         require(
             IERC165(token).supportsInterface(type(IERC721).interfaceId),
@@ -517,7 +515,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         address to,
         uint256[8] calldata proof, 
         uint256 unlockNullifier
-    ) external onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest nonReentrant {
+    ) external onlyOwner validUnlock(proof, unlockNullifier) requireNoRecoverRequest nonceIncrementing nonReentrant {
         require(
             IERC165(tokenContract).supportsInterface(type(IERC721).interfaceId),
             "Custodian: Address does not support IERC721"
@@ -648,10 +646,14 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
     modifier validUnlock(uint256[8] calldata proof, uint256 nullifier) {
         if (verifyUnlockProof(proof, nullifier)) {
             _;
-            nonce++;
         } else {
             revert InvalidProof();
         }
+    }
+
+    modifier nonceIncrementing() {
+        _;
+        nonce++;
     }
 
     //  ───────────────────────────  Utility Functions  ───────────────────────────  \\
