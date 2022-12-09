@@ -80,7 +80,7 @@ export async function getSpendLimit(
     const custodianDeployment = await hre.deployments.get("Custodian");
     let custodian = await ethers.getContractAt("Custodian", custodianDeployment.address);
     const result = await custodian.getSpendLimit(token ?? custodian.address);
-
+    console.log(result)
     const { exists, limit } = result;
     if (exists) {
         console.log(`Limit is: ${token ? limit : ethers.utils.formatEther(limit).concat(" Eth")}`);

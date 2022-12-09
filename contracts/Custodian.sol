@@ -9,6 +9,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC777Recipient} from "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
@@ -163,7 +164,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
                 [
                     nullifier,
                     uint256(recoveryCommitment),
-                    0,
+                    nonce,
                     uint256(uint160(recoveryRecipient))
                 ]
             )
@@ -182,6 +183,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         // 3. Lock account and set recoveryAddress
         unlockedUntil = 0;
         recoveryAddress = recoveryRecipient;
+        nonce++;
 
         emit RecoveryInitiated(recoverableAfter);
     }
@@ -210,6 +212,8 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         );
 
         recoverableAfter = 0;
+        recoveryCommitment = newRecoveryCommitment;
+        unlockCommitment = newUnlockCommitment;
         transferOwnership(recoveryAddress);
 
         emit RecoveryOccured(owner());
@@ -249,7 +253,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
                 [
                     nullifier,
                     uint256(recoveryCommitment),
-                    0,
+                    nonce,
                     uint256(uint160(recoveryRecipient))
                 ]
             )
@@ -274,6 +278,7 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         unlockCommitment = newUnlockCommitment;
         recoveryCommitment = newRecoveryCommitment;
         _transferOwnership(recoveryRecipient);
+        nonce++;
     }
 
     // ────────────────────────────────────────────────────────────────────────────────
@@ -343,13 +348,11 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
             address(this).balance >= amount,
             "Custodian: Insufficient funds"
         );
-        (bool hasLimit, uint256 limit) = spendLimits.tryGet(address(this));
-        if (hasLimit) {
-            require(
-                address(this).balance - amount >= limit,
-                "Custodian: Amount would exceed spend limit"
-            );
-        }
+        (, uint256 limit) = spendLimits.tryGet(address(this));
+        require(
+            address(this).balance - amount >= limit,
+            "Custodian: Amount would exceed balance or spend limit"
+        );
         (success, data) = to.call{value: amount}("");
         require(success, "Custodian: Failed to send Ether");
 
@@ -367,6 +370,11 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
             IERC165(tokenContract).supportsInterface(type(IERC20).interfaceId),
             "Custodian: Address does not support ERC20"
         );
+        (, uint256 limit) = spendLimits.tryGet(address(this));
+        require(
+            address(this).balance - amount >= limit,
+            "Custodian: Amount would exceed balance or spend limit"
+        );
 
         success = IERC20(tokenContract).transfer(to, amount);
         require(success, "Custodian: Transfer failed");
@@ -374,6 +382,24 @@ contract Custodian is Ownable, ERC721Holder, ERC1155Holder, IERC777Recipient {
         verifySpendLimit(tokenContract);
 
         return success;
+    }
+
+    function transferMultiToken(
+        address tokenContract,
+        uint256 tokenId,
+        uint256 quantity,
+        address to
+    ) external onlyOwner requireUnlocked requireNoRecoverRequest {
+        require(
+            IERC165(tokenContract).supportsInterface(type(IERC1155).interfaceId),
+            "Custodian: Address does not support IERC721"
+        );
+        uint256 balance = IERC1155(tokenContract).balanceOf(address(this), tokenId);
+        require(
+            balance >= quantity, 
+            "Custodian: Insufficient balance of token"
+        );
+        IERC1155(tokenContract).safeTransferFrom(address(this), to, tokenId, quantity, "");
     }
 
     function transferNFT(
