@@ -17,6 +17,7 @@ import {IVerifier} from "./IVerifier.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 error Locked();
@@ -36,6 +37,7 @@ error InvalidProof();
  */
 contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipient, ReentrancyGuard {
     using Address for address;
+    using SafeCast for uint256;
     using EnumerableMap for EnumerableMap.Bytes32ToUintMap;
 
     // ────────────────────────────────────────────────────────────────────────────────
@@ -189,7 +191,7 @@ contract Custodian is OwnableDelayed, ERC721Holder, ERC1155Holder, IERC777Recipi
         }
         
         // 3. Nominate owner and lock custodian
-        _nominateOwner(recoveryRecipient, recoverableAfter);
+        _nominateOwner(recoveryRecipient, recoverableAfter.toUint64());
         unlockedUntil = 0;
         unlockCommitment = bytes32(0x0);
         nonce++;

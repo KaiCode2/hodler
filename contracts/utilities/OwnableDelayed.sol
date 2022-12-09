@@ -4,13 +4,16 @@
 pragma solidity ^0.8.0;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Timers} from "@openzeppelin/contracts/utils/Timers.sol";
 
 /**
  * @dev Extends Ownable2Step with a time delay which can be cancelled internally
  * Doesn't implement Ownable2Step due to the lack of virtual on acceptOwnership.
  */
 abstract contract OwnableDelayed is Ownable {
-    uint256 private _eligibleTime;
+    using Timers for Timers.Timestamp;
+
+    Timers.Timestamp private _eligibleTime;
     address private _pendingOwner;
 
     event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner, uint256 indexed eligibleTime);
@@ -23,16 +26,16 @@ abstract contract OwnableDelayed is Ownable {
     }
 
     function isTransferEligible() public view virtual returns (bool) {
-        return _eligibleTime != 0 && block.timestamp >= _eligibleTime;
+        return _eligibleTime.isExpired();
     }
 
-    function ownerTransferEligibleTime() public view virtual returns (uint256) {
-        return _eligibleTime;
+    function ownerTransferEligibleTime() public view virtual returns (uint64) {
+        return _eligibleTime.getDeadline();
     }
 
-    function _nominateOwner(address newOwner, uint256 eligibleTime) internal virtual {
+    function _nominateOwner(address newOwner, uint64 eligibleTime) internal virtual {
         require(pendingOwner() == address(0x0), "OwnableDelayed: Transfer already initiated");
-        _eligibleTime = eligibleTime;
+        _eligibleTime.setDeadline(eligibleTime);
         _pendingOwner = newOwner;
 
         emit OwnershipTransferStarted(owner(), newOwner, eligibleTime);
@@ -43,9 +46,9 @@ abstract contract OwnableDelayed is Ownable {
         _transferOwnership(owner());
     }
 
-    function _setEligibleTime(uint256 eligibleTime) internal {
+    function _setEligibleTime(uint64 eligibleTime) internal {
         require(_pendingOwner != address(0x0), "OwnableDelayed: No transfer initiated");
-        _eligibleTime = eligibleTime;
+        _eligibleTime.setDeadline(eligibleTime);
     }
 
     /**
@@ -54,7 +57,7 @@ abstract contract OwnableDelayed is Ownable {
      */
     function transferOwnership(address newOwner) public virtual override onlyOwner {
         _pendingOwner = newOwner;
-        _eligibleTime = 0;
+        _eligibleTime.reset();
 
         emit OwnershipTransferStarted(owner(), newOwner, 0);
     }
