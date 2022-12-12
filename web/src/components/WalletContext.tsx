@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { providers } from "ethers";
 
 
-interface ContextType {
+export interface ContextType {
     providerState: string;
     provider?: providers.Web3Provider;
     connectWallet: () => void;
@@ -17,7 +17,7 @@ export function useWallet() {
     return useContext(WalletContext);
 }
 
-interface Props {
+export interface Props {
     children: ReactNode;
 }
 

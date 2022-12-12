@@ -1,12 +1,15 @@
 import Head from 'next/head'
 import Image from 'next/image'
-// import styles from '@/styles/Home.module.css'
 import { useWallet } from '@/components/WalletContext';
+import { useEffect } from 'react';
 
 
 export default function Home() {
   const { provider, connectWallet } = useWallet();
 
+  useEffect(() => {
+
+  }, [provider]);
 
   return (
     <div className="">
@@ -22,7 +25,11 @@ export default function Home() {
           <h1 className="col m-10 px-8 py-2 rounded-lg text-3xl text-stone-100">Welcome to Custodian</h1>
         </div>
 
-        <button onClick={() => connectWallet()} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Connect</button>
+        { provider ? 
+          <button onClick={() => connectWallet()} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Connect</button> :
+          <button onClick={() => connectWallet()} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Deploy Custodian</button>
+        }
+        
 
         
 
