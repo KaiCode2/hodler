@@ -4,6 +4,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "hardhat-circom";
 import "hardhat-deploy";
 import "@nomicfoundation/hardhat-network-helpers";
+import "@nomicfoundation/hardhat-chai-matchers";
 import "tsconfig-paths/register";
 // @ts-ignore
 import { encodeMessage } from "./scripts/encodeStrings";

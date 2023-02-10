@@ -4,6 +4,7 @@
   "description": "Custodial smart contract for the solo crypto user",
   "main": "index.js",
   "scripts": {
+    "start": "npx hardhat node || cd web && npm run dev",
     "circom:dev": "hardhat circom --deterministic --debug --verbose",
     "circom:prod": "hardhat circom --verbose",
     "test": "hardhat test"
@@ -25,15 +26,17 @@
   },
   "homepage": "https://github.com/KaiCode2/hodler#readme",
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.1",
+    "@nomiclabs/hardhat-ethers": "^2.2.2",
     "@nomiclabs/hardhat-etherscan": "^3.1.3",
-    "autoprefixer": "^10.4.13",
-    "hardhat": "^2.12.3",
-    "postcss": "^8.4.19",
-    "tailwindcss": "^3.2.4"
+    "@types/chai": "^4.3.4",
+    "chai": "^4.3.7",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.12.7",
+    "mocha": "^10.2.0"
   },
   "dependencies": {
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@openzeppelin/contracts": "^4.8.0",
     "circomlib": "^2.0.5",
     "circomlibjs": "npm:circomlib@^0.5.5",
