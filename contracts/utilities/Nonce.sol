@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Author: Kai Aldag <kai.aldag@everyrealm.com>
+// Author: Kai Aldag <kaialdag@icloud.com>
 // Date: December 8th, 2022
 // Purpose: Contract containing a nonce logic
 
@@ -12,7 +12,7 @@ pragma solidity ^0.8.0;
  * @dev Contains useful functionality for contracts that require a contract wide
  * nonce system.
  *
- * @custom:security-contact kai.aldag@everyrealm.com
+ * @custom:security-contact kaialdag@icloud.com
  */
 abstract contract Nonce {
     uint256 private _nonce;
