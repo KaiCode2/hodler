@@ -30,11 +30,6 @@ export default function Home() {
           <button onClick={() => connectWallet()} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Deploy Custodian</button>
         }
         
-
-        
-
-
-        
       </main>
 
       <footer className="">
