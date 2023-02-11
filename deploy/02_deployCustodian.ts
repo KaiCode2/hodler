@@ -15,14 +15,14 @@ const deployCustodian: DeployFunction = async function (
     const recoveryNullifier = ethers.utils.hexZeroPad(poseidon([0]), 32);
     const unlockNullifier  = ethers.utils.hexZeroPad(poseidon([1]), 32);
 
-    const verifierDeployment = await deployments.get("Verifier");
+    const factoryDeployment = await deployments.get("CustodianFactory");
+    const CustodianFactory = await ethers.getContractFactory("CustodianFactory");
+    const custodianFactory = CustodianFactory.attach(factoryDeployment.address);
 
-    const deployResults = await deployments.deploy("Custodian", {
-        from: accounts[0].address,
-		args: [recoveryNullifier, unlockNullifier, accounts[1].address, verifierDeployment.address],
-        log: true,
-    });
-    console.log(`Deployed Custodian to: ${deployResults.address}`);
+    const deployTx = await custodianFactory.deploy(recoveryNullifier, unlockNullifier, accounts[1].address);
+    const deployResult = await deployTx.wait();
+
+    console.log(`Deployed Custodian to: ${deployResult.events?.at(0)?.topics[0]}`);
 };
 
 export default deployCustodian;

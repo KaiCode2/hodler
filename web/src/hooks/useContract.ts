@@ -2,7 +2,12 @@ import React, { useMemo } from "react";
 
 //contracts
 import { Contract } from "@ethersproject/contracts";
-import { Custodian, Custodian__factory } from "@/../../typechain-types";
+import {
+  Custodian,
+  CustodianFactory,
+  CustodianFactory__factory,
+  Custodian__factory,
+} from "@/typechain-types";
 
 import { useWallet } from "@/components/WalletContext/WalletContext";
 
@@ -20,7 +25,7 @@ function wrapContract<T extends Contract = Contract>(contract: Contract) {
           contractWrapper.contract.interface.getFunction(key);
         // Checks if the function is not pure or view (requiring user to sign)
         if (functionInfo && !functionInfo.constant) {
-          return  (...args: any) => {
+          return (...args: any) => {
             const pendingTx = originalMethod.apply(this, args);
             // makeTransactionToast(pendingTx);
             return pendingTx;
@@ -66,6 +71,12 @@ export function useContract<T extends Contract = Contract>(
       return null;
     }
   }, [addressOrAddressMap, ABI, provider, withSignerIfPossible]) as T;
+}
+
+export function useCustodianFactoryContract(
+  address: string = process.env.NEXT_PUBLIC_CUSTODIAN_FACTORY_ADDRESS as string
+) {
+  return useContract<CustodianFactory>(address, CustodianFactory__factory.abi);
 }
 
 export function useCustodianContract(

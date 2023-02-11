@@ -4,7 +4,6 @@
   "description": "Custodial smart contract for the solo crypto user",
   "main": "index.js",
   "scripts": {
-    "start": "npx hardhat node || cd web && npm run dev",
     "circom:dev": "hardhat circom --deterministic --debug --verbose",
     "circom:prod": "hardhat circom --verbose",
     "test": "hardhat test"

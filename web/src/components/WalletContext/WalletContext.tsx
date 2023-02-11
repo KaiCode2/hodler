@@ -63,15 +63,15 @@ export function WalletProvider({ children }: Props) {
         setProviderState("ready");
 
         // Check network ID
-        const requiredChainId = process.env.NEXT_PUBLIC_ENV === "development" ? 5 : 1;
+        // const requiredChainId = process.env.NEXT_PUBLIC_ENV === "development" ? 5 : 1;
 
-        const { chainId } = await newProvider.getNetwork();
-        if (requiredChainId != chainId) {
-            await ethereum.request!({
-                method: "wallet_switchEthereumChain",
-                params: [{ chainId: `0x${requiredChainId.toString()}` }],
-            });
-        }
+        // const { chainId } = await newProvider.getNetwork();
+        // if (requiredChainId != chainId) {
+        //     await ethereum.request!({
+        //         method: "wallet_switchEthereumChain",
+        //         params: [{ chainId: `0x${requiredChainId.toString()}` }],
+        //     });
+        // }
     }
 
     useEffect(() => {
