@@ -46,7 +46,8 @@ function useCustodian() {
   };
 
   return {
-    exists: !!custodianAddress,
+    deployed: !!custodianAddress,
+    address: custodianAddress,
     factory: custodianFactory,
     deployCustodian,
     custodian: custodianAddress && wrapContract(new Contract(custodianAddress, Custodian__factory.abi, signer ?? provider))

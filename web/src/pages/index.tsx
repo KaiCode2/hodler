@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { useWallet } from '@/components/WalletContext/WalletContext';
 import { DeployModal } from '@/components/DeployModal';
 import { useCustodianFactoryContract } from '@/hooks/useContract';
@@ -9,20 +10,19 @@ import { ethers } from 'ethers';
 
 export default function Home() {
   const { address, signer, providerState, connectWallet } = useWallet();
-  const custodian = useCustodian();
+  const router = useRouter();
+  const { deployed, deployCustodian } = useCustodian();
   
   const [showDisplayModal, setShowDisplayModal] = useState(false);
 
-  useEffect(() => {
-    console.log(`Exists: ${custodian.exists}`);
-    if (custodian.exists) {
-      console.log(custodian);
-    }
-  }, [custodian]);
+  const handleDeploy = async (unlock: string, recovery: string) => {
+    await deployCustodian(unlock, recovery, ethers.constants.AddressZero);
+  }
 
-  const deployCustodian = async (unlock: string, recovery: string) => {
-    console.log(unlock, recovery, custodian);
-    await custodian.deployCustodian(unlock, recovery, ethers.constants.AddressZero);
+  const handleLaunchDashboard = (e: any) => {
+    console.log(1111)
+    e.preventDefault()
+    router.push('/dashboard');
   }
 
   return (
@@ -34,13 +34,18 @@ export default function Home() {
           <p className='mb-10 '>Unaudited degen security</p>
         </div>
 
-        {signer ?
-          <button onClick={() => setShowDisplayModal(true)} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Deploy Custodian</button> :
+        {address ?
+          <>
+            {deployed ? 
+              <button onClick={handleLaunchDashboard} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Launch Dashboard</button> :
+              <button onClick={() => setShowDisplayModal(true)} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Deploy Custodian</button>
+            } 
+          </>:
           <button onClick={connectWallet} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Connect</button>
         }
 
         { showDisplayModal &&
-          <DeployModal onComplete={deployCustodian} onExit={() => setShowDisplayModal(false)} />
+          <DeployModal onComplete={handleDeploy} onExit={() => setShowDisplayModal(false)} />
         }
 
       </main>
