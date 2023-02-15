@@ -3,46 +3,26 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@/components/WalletContext/WalletContext';
 import { DeployModal } from '@/components/DeployModal';
 import { useCustodianFactoryContract } from '@/hooks/useContract';
+import { useCustodian } from '@/hooks/useCustodian';
 import { poseidonHashHex } from '@/utils/poseidon';
 import { ethers } from 'ethers';
 
 export default function Home() {
-  const { signer, providerState, connectWallet } = useWallet();
-  const [custodian, setCustodian] = useState();
-  const custodianFactory = useCustodianFactoryContract();
+  const { address, signer, providerState, connectWallet } = useWallet();
+  const custodian = useCustodian();
+  
   const [showDisplayModal, setShowDisplayModal] = useState(false);
 
   useEffect(() => {
-    console.log(signer, providerState, custodianFactory)
-    if (signer && custodianFactory) {
-      const getCustodian = async () => {
-        const address = await signer.getAddress();
-        const deploymentResult = await custodianFactory.deployments(address);
-        console.log(deploymentResult);
-
-        if (deploymentResult === ethers.constants.AddressZero) {
-          console.log('deploy new', deploymentResult);
-          // setCustodian();
-        } else {
-          console.log('existing', deploymentResult);
-        }
-      };
-
-      getCustodian();
+    console.log(`Exists: ${custodian.exists}`);
+    if (custodian.exists) {
+      console.log(custodian);
     }
-  }, [signer, providerState, custodianFactory]);
+  }, [custodian]);
 
   const deployCustodian = async (unlock: string, recovery: string) => {
-    console.log(unlock, recovery)
-    if (signer && custodianFactory && !custodian) {
-      const deployCustodian = async () => {
-        const recoveryNullifier = await poseidonHashHex(unlock);
-        const unlockNullifier =  await poseidonHashHex(recovery);
-        console.log(recoveryNullifier, unlockNullifier, custodianFactory, await signer.getAddress());
-        const deployTx = await custodianFactory.safeDeploy(recoveryNullifier, unlockNullifier, "0xC20a0b352F21AEb0440Fe1F8705344bc7A9b49d1");
-      }
-      deployCustodian();
-    }
+    console.log(unlock, recovery, custodian);
+    await custodian.deployCustodian(unlock, recovery, ethers.constants.AddressZero);
   }
 
   return (

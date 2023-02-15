@@ -39,7 +39,7 @@ export function makeTransactionToast(pendingTransaction: any) {
                                             height: '20px',
                                             marginBlockStart: '5px',
                                             marginBlockEnd: '0px',
-                                        }}>View on Polyscan</p>
+                                        }}>View on Etherscan</p>
                                     </div>
                                 </a>
                             );
@@ -68,7 +68,7 @@ export function makeTransactionToast(pendingTransaction: any) {
                                                 height: '20px',
                                                 marginBlockStart: '5px',
                                                 marginBlockEnd: '0px',
-                                            }}>View on Polyscan</p>
+                                            }}>View on Etherscan</p>
                                         </div>
                                     </a>
                                 );

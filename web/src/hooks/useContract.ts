@@ -3,10 +3,8 @@ import React, { useMemo } from "react";
 // contracts
 import { Contract } from "@ethersproject/contracts";
 import {
-  Custodian,
   CustodianFactory,
   CustodianFactory__factory,
-  Custodian__factory,
 } from "@/typechain-types";
 
 // hooks
@@ -20,7 +18,7 @@ interface WrapperContract {
 }
 
 // NOTE: Wraps contract in a proxy. When contract calls are made, Toasts are automatically presented
-function wrapContract<T extends Contract = Contract>(contract: Contract) {
+export function wrapContract<T extends Contract = Contract>(contract: Contract) {
   const handler = {
     get(target: WrapperContract, key: any, value: any) {
       if (contractWrapper.contract.functions[key]) {
@@ -81,10 +79,4 @@ export function useCustodianFactoryContract(
   address: string = process.env.NEXT_PUBLIC_CUSTODIAN_FACTORY_ADDRESS as string
 ) {
   return useContract<CustodianFactory>(address, CustodianFactory__factory.abi);
-}
-
-export function useCustodianContract(
-  address: string = process.env.REACT_APP_CUSTODIAN_ADDRESS as string
-) {
-  return useContract<Custodian>(address, Custodian__factory.abi);
 }

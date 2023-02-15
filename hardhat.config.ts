@@ -56,9 +56,11 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       loggingEnabled: true,
+      gasPrice: 1000000000,
+      initialBaseFeePerGas: 900000000,
       forking: {
         url: `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,
-        blockNumber: 16380803
+        // blockNumber: 16380803
       }
     },
     goerli: {
