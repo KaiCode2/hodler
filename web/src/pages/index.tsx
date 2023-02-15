@@ -1,11 +1,9 @@
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useWallet } from '@/components/WalletContext/WalletContext';
 import { DeployModal } from '@/components/DeployModal';
-import { useCustodianFactoryContract } from '@/hooks/useContract';
 import { useCustodian } from '@/hooks/useCustodian';
-import { poseidonHashHex } from '@/utils/poseidon';
 import { ethers } from 'ethers';
 
 export default function Home() {
