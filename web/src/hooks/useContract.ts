@@ -53,10 +53,10 @@ export function useContract<T extends Contract = Contract>(
   ABI: any,
   withSignerIfPossible = true
 ): T | null {
-  const { provider } = useWallet();
+  const { provider, signer } = useWallet();
 
   return useMemo(() => {
-    if (!addressOrAddressMap || !ABI || provider == null) {
+    if (!addressOrAddressMap || !ABI || !provider) {
       return null;
     }
 
@@ -68,13 +68,13 @@ export function useContract<T extends Contract = Contract>(
       return null;
     }
     try {
-      const contract: Contract = new Contract(address, ABI, provider as any);
+      const contract: Contract = new Contract(address, ABI, withSignerIfPossible ? (signer ?? provider) : provider);
       return wrapContract(contract);
     } catch (error) {
       console.error("Failed to get contract", error);
       return null;
     }
-  }, [addressOrAddressMap, ABI, provider, withSignerIfPossible]) as T;
+  }, [addressOrAddressMap, ABI, signer, withSignerIfPossible]) as T;
 }
 
 export function useCustodianFactoryContract(

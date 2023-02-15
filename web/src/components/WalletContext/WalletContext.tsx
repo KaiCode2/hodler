@@ -5,6 +5,7 @@ import { ethers, providers } from "ethers";
 export interface ContextType {
     providerState: string;
     provider?: providers.Web3Provider;
+    signer?: providers.JsonRpcSigner;
     connectWallet: () => void;
 }
 
@@ -23,6 +24,7 @@ export interface Props {
 
 export function WalletProvider({ children }: Props) {
     const [provider, setProvider] = useState<providers.Web3Provider | undefined>();
+    const [signer, setSigner] = useState<providers.JsonRpcSigner | undefined>();
     const [providerState, setProviderState] = useState("not-connected");
 
     async function connectWallet() {
@@ -59,7 +61,8 @@ export function WalletProvider({ children }: Props) {
         }
 
         const newProvider = new providers.Web3Provider(window.ethereum);
-        
+        const newSigner = newProvider.getSigner();
+
         // Check network ID
         if (process.env.NEXT_PUBLIC_CHAIN_ID) {
             const requiredChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID);
@@ -73,6 +76,7 @@ export function WalletProvider({ children }: Props) {
         }
 
         setProvider(newProvider);
+        setSigner(newSigner);
         setProviderState("ready");
     }
 
@@ -87,11 +91,12 @@ export function WalletProvider({ children }: Props) {
             });
 
             // TODO: add listener for network change
+            loadEthProvider();
         }
     }, []);
 
     return (
-        <WalletContext.Provider value={{ providerState, provider, connectWallet }}>
+        <WalletContext.Provider value={{ providerState, provider, signer, connectWallet }}>
             {children}
         </WalletContext.Provider>
     );

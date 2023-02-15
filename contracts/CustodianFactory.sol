@@ -49,7 +49,7 @@ contract CustodianFactory is Ownable2Step {
         address _recoveryTrustee
     ) external payable returns(address newVaultAddress) {
         require(
-            deployments[msg.sender] != address(0x0), 
+            deployments[msg.sender] == address(0x0), 
             "CustodianFactory: User already has custodian deployed"
         );
         return deploy(_recoveryCommitment, _unlockCommitment, _recoveryTrustee);

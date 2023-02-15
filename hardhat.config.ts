@@ -58,6 +58,7 @@ const config: HardhatUserConfig = {
       loggingEnabled: true,
       forking: {
         url: `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,
+        blockNumber: 16380803
       }
     },
     goerli: {

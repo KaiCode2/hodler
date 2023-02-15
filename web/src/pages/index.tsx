@@ -7,42 +7,39 @@ import { poseidonHashHex } from '@/utils/poseidon';
 import { ethers } from 'ethers';
 
 export default function Home() {
-  const { provider, providerState, connectWallet } = useWallet();
+  const { signer, providerState, connectWallet } = useWallet();
   const [custodian, setCustodian] = useState();
   const custodianFactory = useCustodianFactoryContract();
   const [showDisplayModal, setShowDisplayModal] = useState(false);
 
   useEffect(() => {
-    console.log(provider, providerState, custodianFactory)
-    if (provider && custodianFactory) {
+    console.log(signer, providerState, custodianFactory)
+    if (signer && custodianFactory) {
       const getCustodian = async () => {
-        const accounts = await provider.listAccounts();
-        const primaryAccount = accounts[0];
-        console.log(accounts, primaryAccount);
-
-        const deploymentResult = await custodianFactory.deployments(primaryAccount);
+        const address = await signer.getAddress();
+        const deploymentResult = await custodianFactory.deployments(address);
         console.log(deploymentResult);
 
-        if (deploymentResult !== ethers.constants.AddressZero) {
-          console.log('deploy new');
+        if (deploymentResult === ethers.constants.AddressZero) {
+          console.log('deploy new', deploymentResult);
           // setCustodian();
         } else {
-          console.log('existing');
+          console.log('existing', deploymentResult);
         }
       };
 
       getCustodian();
     }
-  }, [provider, providerState, custodianFactory]);
+  }, [signer, providerState, custodianFactory]);
 
   const deployCustodian = async (unlock: string, recovery: string) => {
     console.log(unlock, recovery)
-    if (provider && custodianFactory && !custodian) {
+    if (signer && custodianFactory && !custodian) {
       const deployCustodian = async () => {
         const recoveryNullifier = await poseidonHashHex(unlock);
         const unlockNullifier =  await poseidonHashHex(recovery);
-        console.log(recoveryNullifier, unlockNullifier);
-        const deployTx = await custodianFactory.safeDeploy(recoveryNullifier, unlockNullifier, ethers.constants.AddressZero);
+        console.log(recoveryNullifier, unlockNullifier, custodianFactory, await signer.getAddress());
+        const deployTx = await custodianFactory.safeDeploy(recoveryNullifier, unlockNullifier, "0xC20a0b352F21AEb0440Fe1F8705344bc7A9b49d1");
       }
       deployCustodian();
     }
@@ -57,7 +54,7 @@ export default function Home() {
           <p className='mb-10 '>Unaudited degen security</p>
         </div>
 
-        {provider ?
+        {signer ?
           <button onClick={() => setShowDisplayModal(true)} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Deploy Custodian</button> :
           <button onClick={connectWallet} className="col self-center max-w-2xl m-10 px-8 py-2 rounded-lg bg-emerald-300 text-lg text-stone-900">Connect</button>
         }
