@@ -1,8 +1,7 @@
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-// @ts-ignore
-import { poseidon } from "circomlibjs";
+
 
 
 const deployCustodianFactory: DeployFunction = async function (

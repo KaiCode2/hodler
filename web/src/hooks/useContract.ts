@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 
-//contracts
+// contracts
 import { Contract } from "@ethersproject/contracts";
 import {
   Custodian,
@@ -9,7 +9,11 @@ import {
   Custodian__factory,
 } from "@/typechain-types";
 
+// hooks
 import { useWallet } from "@/components/WalletContext/WalletContext";
+
+// components
+import { makeTransactionToast } from "@/components/Toast";
 
 interface WrapperContract {
   contract: Contract;
@@ -27,7 +31,7 @@ function wrapContract<T extends Contract = Contract>(contract: Contract) {
         if (functionInfo && !functionInfo.constant) {
           return (...args: any) => {
             const pendingTx = originalMethod.apply(this, args);
-            // makeTransactionToast(pendingTx);
+            makeTransactionToast(pendingTx);
             return pendingTx;
           };
         }
