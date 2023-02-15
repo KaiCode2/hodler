@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { providers } from "ethers";
+import { ethers, providers } from "ethers";
 
 
 export interface ContextType {
@@ -8,9 +8,9 @@ export interface ContextType {
     connectWallet: () => void;
 }
 
-const WalletContext = createContext<ContextType>({ 
+const WalletContext = createContext<ContextType>({
     providerState: "not-connected",
-    connectWallet: () => {} 
+    connectWallet: () => { }
 });
 
 export function useWallet() {
@@ -59,19 +59,21 @@ export function WalletProvider({ children }: Props) {
         }
 
         const newProvider = new providers.Web3Provider(window.ethereum);
+        
+        // Check network ID
+        if (process.env.NEXT_PUBLIC_CHAIN_ID) {
+            const requiredChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID);
+            const { chainId } = await newProvider.getNetwork();
+            if (requiredChainId != chainId) {
+                await ethereum.request!({
+                    method: "wallet_switchEthereumChain",
+                    params: [{ chainId: ethers.utils.hexValue(requiredChainId) }],
+                });
+            }
+        }
+
         setProvider(newProvider);
         setProviderState("ready");
-
-        // Check network ID
-        // const requiredChainId = process.env.NEXT_PUBLIC_ENV === "development" ? 5 : 1;
-
-        // const { chainId } = await newProvider.getNetwork();
-        // if (requiredChainId != chainId) {
-        //     await ethereum.request!({
-        //         method: "wallet_switchEthereumChain",
-        //         params: [{ chainId: `0x${requiredChainId.toString()}` }],
-        //     });
-        // }
     }
 
     useEffect(() => {
@@ -83,6 +85,8 @@ export function WalletProvider({ children }: Props) {
                     location.reload();
                 }
             });
+
+            // TODO: add listener for network change
         }
     }, []);
 

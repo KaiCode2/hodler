@@ -1,7 +1,9 @@
 
 import { randomBytes } from "crypto";
-import { ethers } from "ethers";
 import React, { useEffect, useRef, useState } from "react";
+import { ToastMessage, ToastType } from "@/components/Toast";
+import { MdCopyAll } from 'react-icons/md';
+
 
 interface DeployModalProps {
     onComplete: (unlock: string, reset: string) => void;
@@ -46,14 +48,22 @@ function DeployModal(props: DeployModalProps): JSX.Element {
         }
     }, [unlockNullifier, confirmUnlock]);
 
+    const copyResetToClipboard = () => {
+        navigator.clipboard.writeText(resetNullifier);
+        ToastMessage({
+            type: ToastType.SUCCESS,
+            message: "Copied to clipboard!"
+        });
+    };
+
     return (
         <div className="fixed inset-0 z-10 overflow-y-auto">
             <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
                 <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                     <div className="bg-white dark:bg-gray-200 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <div className="sm:flex sm:items-start">
-                            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                                <h4 className="text-xl font-medium leading-6 text-gray-900 mb-6" id="modal-title">Create Custodian</h4>
+                        <div className="sm:flex sm:items-start w-full">
+                            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h4 className="text-xl font-medium leading-6 text-gray-900 mb-6 w-full" id="modal-title">Create Custodian</h4>
                                 {step === 0 &&
                                     <>
                                         <div className="mt-2">
@@ -75,11 +85,15 @@ function DeployModal(props: DeployModalProps): JSX.Element {
                                     </>
                                 }
                                 {step === 1 &&
-                                    <>
+                                    <div className="w-full">
                                         <p className="text-sm text-gray-500 mt-2">Your recovery code is:</p>
-                                        <p className="mt-4 mb-4 text-gray-500 font-bold border border-gray-700 p-3">{resetNullifier}</p>
+                                        <p className="group pl-4 py-3 my-4 -ml-8 -mr-4 text-gray-500 font-bold border border-gray-700 hover:cursor-pointer " 
+                                            onClick={copyResetToClipboard} 
+                                            title="Copy to clipboard">
+                                                {resetNullifier}<MdCopyAll className='ml-2  align-baseline text-action-analogue-400 hidden group-hover:inline-flex' />
+                                            </p>
                                         <p className="text-md text-gray-500 font-bold mt-2">Keep this code safe. Anyone with this key is able to request an account reset.</p>
-                                    </>
+                                    </div>
                                 }
                                 {step === 2 &&
                                     <div className="w-full">

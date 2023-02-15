@@ -1,5 +1,5 @@
 // base
-import { randomUUID } from "crypto";
+import { randomBytes } from "ethers/lib/utils";
 import React from "react";
 import { toast } from "react-toastify";
 // import { Loading } from "../Loader";
@@ -54,7 +54,7 @@ const ToastMessage = (toastInfo: ToastInfo) => {
             </div>
         </div>
     , {
-        toastId: toastInfo.id ?? randomUUID(),
+        toastId: toastInfo.id ?? randomBytes(32).toString(),
         type: 'default',
         autoClose: toastInfo.autoclose,
         icon: toastInfo.icon ? parseToastIcon(toastInfo.icon) : false,

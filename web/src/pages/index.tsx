@@ -1,11 +1,10 @@
 
 import { useEffect, useState } from 'react';
 import { useWallet } from '@/components/WalletContext/WalletContext';
-import { DeployModal, DeployModalProps } from '@/components/DeployModal';
+import { DeployModal } from '@/components/DeployModal';
 import { useCustodianFactoryContract } from '@/hooks/useContract';
+import { poseidonHashHex } from '@/utils/poseidon';
 import { ethers } from 'ethers';
-// @ts-ignore
-import { buildPoseidon } from "circomlibjs";
 
 export default function Home() {
   const { provider, providerState, connectWallet } = useWallet();
@@ -40,10 +39,9 @@ export default function Home() {
     console.log(unlock, recovery)
     if (provider && custodianFactory && !custodian) {
       const deployCustodian = async () => {
-        const poseidon = buildPoseidon();
-        console.log(poseidon);
-        const recoveryNullifier = ethers.utils.hexZeroPad(poseidon([0]), 32);
-        const unlockNullifier = ethers.utils.hexZeroPad(poseidon([1]), 32);
+        const recoveryNullifier = await poseidonHashHex(unlock);
+        const unlockNullifier =  await poseidonHashHex(recovery);
+        console.log(recoveryNullifier, unlockNullifier);
         const deployTx = await custodianFactory.safeDeploy(recoveryNullifier, unlockNullifier, ethers.constants.AddressZero);
       }
       deployCustodian();
