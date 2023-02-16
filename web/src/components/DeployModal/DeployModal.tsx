@@ -90,7 +90,7 @@ function DeployModal(props: DeployModalProps): JSX.Element {
                                         <p className="group pl-4 py-3 my-4 -ml-8 -mr-4 text-gray-500 font-bold border border-gray-700 hover:cursor-pointer " 
                                             onClick={copyResetToClipboard} 
                                             title="Copy to clipboard">
-                                                {resetNullifier}<MdCopyAll className='ml-2  align-baseline text-action-analogue-400 hidden group-hover:inline-flex' />
+                                                {resetNullifier}<MdCopyAll className='ml-2 align-baseline text-action-analogue-400 hidden group-hover:inline-flex' />
                                             </p>
                                         <p className="text-md text-gray-500 font-bold mt-2">Keep this code safe. Anyone with this key is able to request an account reset.</p>
                                     </div>

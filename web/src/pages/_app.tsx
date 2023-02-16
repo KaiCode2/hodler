@@ -8,6 +8,7 @@ import Layout from '@/components/Layout';
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import { Themes, allThemes } from '@/utils/themes';
+import { PageLoading } from '@/components/Loading';
 
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -26,6 +27,7 @@ export default function App({ Component, pageProps }: AppProps) {
             closeOnClick
             pauseOnHover
           />
+          <PageLoading />
         </WalletProvider>
       </ThemeProvider>
     </Layout>

@@ -13,7 +13,7 @@ function Dashboard(): JSX.Element {
     return (
         <div className="w-screen h-screen bg-slate-900 text-slate-50">
             <h1>Dash</h1>
-            <button className="btn btn-primary" onClick={() => { setTheme(Themes.coffee) }}>Button</button>
+            <button className="btn btn-primary" onClick={() => { setTheme(Themes.night) }}>Button</button>
         </div>
     );
 }
