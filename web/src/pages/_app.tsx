@@ -11,9 +11,9 @@ import { Themes, allThemes } from '@/utils/themes';
 import { PageLoading } from '@/components/Loading';
 
 
-export default function App({ Component, pageProps }: AppProps) {
+export default function App({ Component, pageProps, router }: AppProps) {
   return (
-    <Layout>
+    <Layout title='Hodler'>
       <ThemeProvider attribute="data-theme" themes={allThemes} defaultTheme={Themes.night}>
         <WalletProvider>
           <Component {...pageProps} />

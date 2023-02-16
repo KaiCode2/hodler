@@ -4,7 +4,6 @@ import { useWallet } from '@/components/WalletContext/WalletContext';
 import { useCustodian } from '@/hooks/useCustodian';
 import { useTheme } from 'next-themes'
 import { Themes } from "@/utils/themes";
-import { Navbar } from "@/components/Navbar";
 
 function Dashboard(): JSX.Element {
     const { theme, setTheme } = useTheme()
@@ -13,7 +12,6 @@ function Dashboard(): JSX.Element {
 
     return (
         <div className="w-screen h-screen bg-base-100 text-slate-50">
-            <Navbar />
             <h1>Dash</h1>
             <button className="btn btn-primary" onClick={() => { setTheme(Themes.night) }}>Button</button>
         </div>

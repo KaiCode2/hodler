@@ -2,6 +2,7 @@ import React from "react";
 import Head from "next/head";
 
 interface Props {
+    title: string;
     children: JSX.Element | JSX.Element[];
 }
 
@@ -9,7 +10,7 @@ export default function Layout(props: Props) {
     return (
         <>
             <Head>
-                <title>Custodian</title>
+                <title>{props.title}</title>
                 <meta name="description" content="Secure your tokens yourself today" />
                 <link rel="icon" href="/favicon.ico" />
 
@@ -25,8 +26,15 @@ export default function Layout(props: Props) {
                     rel="stylesheet" />
                 <meta name="fortmatic-site-verification" content="hX3zvMnrdDbw3EKl" />
             </Head>
+            <div className="h-screen w-screen">
+                <main className="h-full w-full bg-base-100">
+                    {props.children}
+                </main>
 
-            {props.children}
+                <footer className="bg-base-200">
+
+                </footer>
+            </div>
         </>
     );
 };
