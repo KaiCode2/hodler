@@ -72,13 +72,13 @@ function DeployModal(props: DeployModalProps): JSX.Element {
                                         <div className="mb-4 mt-8">
                                             <label htmlFor="password" className={`block mb-2 text-sm font-bold ${!mismatchError ? "text-gray-900 dark:text-black" : "text-red-700 dark:text-red-500"}`}>Unlock Password</label>
                                             <input type="password" id="password" className={!mismatchError ? "bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-400 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" : "bg-red-50 border border-red-500 text-red-900 placeholder-red-700 text-sm rounded-lg focus:ring-red-500 dark:bg-gray-700 focus:border-red-500 block w-full p-2.5 dark:text-red-500 dark:placeholder-red-500 dark:border-red-500"}
-                                                placeholder="•••••" required
+                                                placeholder="•••••" required tabIndex={0}
                                                 onChange={(e) => setUnlockNullifier(e.target.value)} />
                                         </div>
                                         <div className="mb-4">
                                             <label htmlFor="confirmPassword" className={`block mb-2 text-sm font-bold ${!mismatchError ? "text-gray-900 dark:text-black" : "text-red-700 dark:text-red-500"}`}>Confirm Unlock Password</label>
                                             <input type="password" id="confirmPassword" className={!mismatchError ? "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-400 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" : "bg-red-50 border border-red-500 text-red-900 placeholder-red-700 text-sm rounded-lg focus:ring-red-500 dark:bg-gray-700 focus:border-red-500 block w-full p-2.5 dark:text-red-500 dark:placeholder-red-500 dark:border-red-500"}
-                                                placeholder="•••••" required
+                                                placeholder="•••••" required tabIndex={0}
                                                 onChange={(e) => setConfirmUnlock(e.target.value)} />
                                             <p className="mt-2 text-sm text-red-600 dark:text-red-500" hidden={!mismatchError}>Password's don't match</p>
                                         </div>
@@ -103,7 +103,7 @@ function DeployModal(props: DeployModalProps): JSX.Element {
                                         <div className="mb-4 mt-8 w-full">
                                             <label htmlFor="password" className={`block mb-2 text-sm font-bold ${!mismatchError ? "text-gray-900 dark:text-black" : "text-red-700 dark:text-red-500"}`}>Reset Code</label>
                                             <input type="password" id="password" className={`w-full ${!mismatchError ? "bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-400 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" : "bg-red-50 border border-red-500 text-red-900 placeholder-red-700 text-sm rounded-lg focus:ring-red-500 dark:bg-gray-700 focus:border-red-500 block w-full p-2.5 dark:text-red-500 dark:placeholder-red-500 dark:border-red-500"}`}
-                                                placeholder="•••••" required
+                                                placeholder="•••••" required tabIndex={0}
                                                 onChange={(e) => setConfirmReset(e.target.value)} />
                                         </div>
                                     </div>

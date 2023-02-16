@@ -33,8 +33,3 @@ export default function App({ Component, pageProps }: AppProps) {
     </Layout>
   );
 }
-
-// TODO: Create page load animations
-// Router.events.on('routeChangeStart', () => console.log("start"));
-// Router.events.on('routeChangeComplete', () => console.log("done"));
-// Router.events.on('routeChangeError', () => console.log("fail"));
