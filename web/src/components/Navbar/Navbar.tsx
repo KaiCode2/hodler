@@ -1,12 +1,13 @@
 
 import React from "react";
+import { BsFillLockFill, BsFillUnlockFill } from 'react-icons/bs';
 
 function Navbar(): JSX.Element {
 
     return (
         <div className="navbar bg-base-200">
             <div className="flex-1">
-                <a className="btn btn-ghost normal-case text-xl">daisyUI</a>
+                <a className="btn btn-ghost normal-case text-xl">Hodler</a>
             </div>
             <div className="flex-none">
                 <div className="dropdown dropdown-end">
@@ -16,7 +17,7 @@ function Navbar(): JSX.Element {
                             <span className="badge badge-sm indicator-item">8</span>
                         </div>
                     </label>
-                    <div tabIndex={0} className="mt-3 card card-compact dropdown-content w-52 bg-base-100 shadow">
+                    <div tabIndex={0} className="mt-3 card card-compact dropdown-content w-52 bg-base-200 shadow">
                         <div className="card-body">
                             <span className="font-bold text-lg">8 Items</span>
                             <span className="text-info">Subtotal: $999</span>
@@ -25,6 +26,9 @@ function Navbar(): JSX.Element {
                             </div>
                         </div>
                     </div>
+                </div>
+                <div className="dropdown dropdown-end">
+                    <BsFillLockFill />
                 </div>
                 <div className="dropdown dropdown-end">
                     <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
@@ -40,7 +44,7 @@ function Navbar(): JSX.Element {
                             </a>
                         </li>
                         <li><a>Settings</a></li>
-                        <li><a>Logout</a></li>
+                        <li><a>Disconnect</a></li>
                     </ul>
                 </div>
             </div>
