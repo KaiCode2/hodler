@@ -15,7 +15,7 @@ export function makeTransactionToast(pendingTransaction: any) {
             let explorerUrl: string;
 
             if (process.env.NEXT_PUBLIC_EXPLORER_URL) {
-                explorerUrl = process.env.NEXT_PUBLIC_EXPLORER_URL;
+                explorerUrl = `${process.env.NEXT_PUBLIC_EXPLORER_URL}tx/${pendingResult.hash}`;
             }
             // TODO: ensure chain ID of tx matches process.env.NEXT_PUBLIC_CHAIN_ID
 
