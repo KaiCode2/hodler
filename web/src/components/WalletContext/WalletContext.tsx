@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { ethers, providers } from "ethers";
+import { ENSNameForAddress } from "@/utils/ens";
 
 
 export interface ContextType {
     providerState: string;
     address?: string;
+    ensName?: string;
     provider?: providers.Web3Provider;
     signer?: providers.JsonRpcSigner;
     connectWallet: () => void;
@@ -27,6 +29,7 @@ export function WalletProvider({ children }: Props) {
     const [provider, setProvider] = useState<providers.Web3Provider | undefined>();
     const [signer, setSigner] = useState<providers.JsonRpcSigner | undefined>();
     const [address, setAddress] = useState<string | undefined>();
+    const [ensName, setENSName] = useState<string | undefined>();
     const [providerState, setProviderState] = useState("not-connected");
 
     async function connectWallet() {
@@ -85,6 +88,16 @@ export function WalletProvider({ children }: Props) {
     }
 
     useEffect(() => {
+        if (address) {
+            ENSNameForAddress(address).then((name) => {
+                if (name) {
+                    setENSName(name);
+                }
+            });
+        }
+    }, [address]);
+
+    useEffect(() => {
         if (window.ethereum) {
             // Subscribe to accountsChanged event
             (window.ethereum as any).on('accountsChanged', (accounts: any[]) => {
@@ -100,7 +113,7 @@ export function WalletProvider({ children }: Props) {
     }, []);
 
     return (
-        <WalletContext.Provider value={{ providerState, address, provider, signer, connectWallet }}>
+        <WalletContext.Provider value={{ providerState, address, ensName, provider, signer, connectWallet }}>
             {children}
         </WalletContext.Provider>
     );

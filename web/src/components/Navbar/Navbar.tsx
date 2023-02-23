@@ -2,15 +2,40 @@
 import React from "react";
 import { BsFillLockFill, BsFillUnlockFill } from 'react-icons/bs';
 
-function Navbar(): JSX.Element {
+interface NavbarProps {
+    networkImage: string; // TODO: Likely refactor to create a network object w/ name, chainId, img
+    address: string;
+    ensName?: string;
+    unlocked: boolean
+}
 
+function Navbar(props: NavbarProps): JSX.Element {
+    console.log(props);
     return (
         <div className="navbar bg-base-200">
             <div className="flex-1">
-                <a className="btn btn-ghost normal-case text-xl">Hodler</a>
+                <a className="btn btn-ghost normal-case text-xl" href="/app">Hodler</a>
             </div>
             <div className="flex-none">
                 <div className="dropdown dropdown-end">
+                    <label tabIndex={0} className={`flex rounded-full btn btn-ghost shadow-2xl ${props.unlocked ? 'shadow-green-500' : 'shadow-red-500'} hover:-translate-y-1 hover:scale-105 hover:contrast-125`}>
+                        <div className="flex flex-row">
+                            <img src={props.networkImage} className="flex-col object-contain btn btn-circle rounded-full" />
+                            <p className="flex-col">{props.ensName ?? props.address}</p>
+                        </div>
+                    </label>
+                    <ul tabIndex={0} className="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
+                        <li>
+                            <a className="justify-between">
+                                Profile
+                                <span className="badge">New</span>
+                            </a>
+                        </li>
+                        <li><a>Settings</a></li>
+                        <li><a>Disconnect</a></li>
+                    </ul>
+                </div>
+                {/* <div className="dropdown dropdown-end">
                     <label tabIndex={0} className="btn btn-ghost btn-circle">
                         <div className="indicator">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -29,8 +54,8 @@ function Navbar(): JSX.Element {
                 </div>
                 <div className="dropdown dropdown-end">
                     <BsFillLockFill />
-                </div>
-                <div className="dropdown dropdown-end">
+                </div> */}
+                {/* <div className="dropdown dropdown-end">
                     <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
                         <div className="w-10 rounded-full">
                             <img src="/images/stock/photo-1534528741775-53994a69daeb.jpg" />
@@ -46,7 +71,7 @@ function Navbar(): JSX.Element {
                         <li><a>Settings</a></li>
                         <li><a>Disconnect</a></li>
                     </ul>
-                </div>
+                </div> */}
             </div>
         </div>
     );
